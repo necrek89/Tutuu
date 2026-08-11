@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Check, X, Warning, Receipt, File, ClipboardText, ArrowLeft, ArrowRight } from '@phosphor-icons/react'
 import { useT } from '../i18n/useLanguage'
+import { displayUnit } from '../i18n/units'
 import { todayStr, toLocalDateStr } from '../lib/date'
 import { currencySymbol } from '../store/useStore'
 import { Modal, inputStyle as inp } from './UI'
@@ -63,7 +64,7 @@ function printInvoice(html, t) {
 }
 
 // ── Build full HTML document for print ────────────────────────────────────────
-function buildInvoiceHTML({ form, items, subtotal, taxAmount, total, isPartial, stageNames }) {
+function buildInvoiceHTML({ form, items, subtotal, taxAmount, total, isPartial, stageNames, lang }) {
   const taxLine = form.taxRate > 0
     ? `<tr><td colspan="5" style="text-align:right;padding:6px 12px;color:#555">Tax (${form.taxRate}%)</td>
        <td style="text-align:right;padding:6px 12px;font-weight:600">${fmtMoney(taxAmount, items[0]?.currency || '$')}</td></tr>`
@@ -74,7 +75,7 @@ function buildInvoiceHTML({ form, items, subtotal, taxAmount, total, isPartial, 
       <td style="padding:9px 12px;border-bottom:1px solid #E5E7EB">${it.text}</td>
       <td style="padding:9px 12px;border-bottom:1px solid #E5E7EB;color:#555">${it.stage || '—'}</td>
       <td style="padding:9px 12px;border-bottom:1px solid #E5E7EB;text-align:center">${it.quantity != null ? it.quantity : '—'}</td>
-      <td style="padding:9px 12px;border-bottom:1px solid #E5E7EB;text-align:center">${it.unit || '—'}</td>
+      <td style="padding:9px 12px;border-bottom:1px solid #E5E7EB;text-align:center">${displayUnit(it.unit, lang) || '—'}</td>
       <td style="padding:9px 12px;border-bottom:1px solid #E5E7EB;text-align:right">${fmtMoney(it.cost, it.currency)}</td>
       <td style="padding:9px 12px;border-bottom:1px solid #E5E7EB;text-align:right;font-weight:600">${fmtMoney((it.quantity || 1) * it.cost, it.currency)}</td>
     </tr>`).join('')
@@ -216,7 +217,7 @@ function Field({ label, children, half }) {
 
 // ── MAIN COMPONENT ────────────────────────────────────────────────────────────
 export default function InvoiceModal({ proj, tasks, onClose }) {
-  const { t } = useT()
+  const { t, lang } = useT()
 
   const saved = loadSettings()
   const history = loadHistory().filter(h => h.projectId === proj.id)
@@ -291,6 +292,7 @@ export default function InvoiceModal({ proj, tasks, onClose }) {
       subtotal, taxAmount, total,
       isPartial,
       stageNames: selectedStageNames,
+      lang,
     })
     printInvoice(html, t)
     // Save to history
@@ -646,7 +648,7 @@ export default function InvoiceModal({ proj, tasks, onClose }) {
                     <span style={{ fontWeight:500, color:'#1F2937' }}>{tk.text}</span>
                     <span style={{ color:'#6B7280', fontSize:11 }}>{tk.stage || '—'}</span>
                     <span style={{ textAlign:'center', color:'#374151' }}>{tk.quantity != null ? tk.quantity : '—'}</span>
-                    <span style={{ textAlign:'center', color:'#374151' }}>{tk.unit || '—'}</span>
+                    <span style={{ textAlign:'center', color:'#374151' }}>{displayUnit(tk.unit, lang) || '—'}</span>
                     <span style={{ textAlign:'right', color:'#374151' }}>{fmtMoney(tk.cost, tk.currency)}</span>
                     <span style={{ textAlign:'right', fontWeight:600, color:'#1F2937' }}>
                       {fmtMoney((tk.quantity || 1) * tk.cost, tk.currency)}

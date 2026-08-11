@@ -3,6 +3,7 @@ import { Hourglass, X, Warning, CaretDown, CaretUp } from '@phosphor-icons/react
 import { useStore, currencySymbol } from '../store/useStore'
 import { useT } from '../i18n/useLanguage'
 import translations from '../i18n/translations'
+import { normalizeUnit, unitLabel } from '../i18n/units'
 import { Button, FormGroup, Modal } from './UI'
 import { supabase } from '../lib/supabase'
 import DatePicker from './DatePicker'
@@ -126,7 +127,11 @@ async function compressImage(file, maxPx = 1400, quality = 0.82) {
 
 export default function TaskModal({ task, onClose, defaultProjectId }) {
   const { t, lang } = useT()
-  const UNIT_OPTIONS = translations[lang]?.tasks?.units || translations.en.tasks.units
+  // Option values are the canonical English unit code (stored in the DB so
+  // it displays correctly regardless of which language created/views it);
+  // labels are localized for whoever's picking right now.
+  const LOCAL_UNITS = translations[lang]?.tasks?.units || translations.en.tasks.units
+  const UNIT_OPTIONS = translations.en.tasks.units.map((u, i) => ({ value: u.value, label: LOCAL_UNITS[i]?.label || u.label }))
   const { addTask, updateTask, fetchTasks, projects, fetchProjects, fetchWorkers, profile, updateProject } = useStore()
   const isEdit = !!task
   const [workers,   setWorkers]   = useState([])
@@ -146,7 +151,7 @@ export default function TaskModal({ task, onClose, defaultProjectId }) {
     start_date:  task?.start_date  || '',
     deadline:    task?.deadline    || '',
     quantity:    task?.quantity    || '',
-    unit:        task?.unit        || '',
+    unit:        normalizeUnit(task?.unit) || '',
     cost:        task?.cost        || '',
     currency:    task?.currency    || useStore.getState().profile?.currency || 'USD',
   })
@@ -432,7 +437,7 @@ export default function TaskModal({ task, onClose, defaultProjectId }) {
               </div>
 
               {/* Unit price → auto-calc total */}
-              <FormGroup label={`${t('tasks.unitPriceLabel')}${form.unit ? ` (${form.unit})` : ''}`}>
+              <FormGroup label={`${t('tasks.unitPriceLabel')}${form.unit ? ` (${unitLabel(form.unit, lang)})` : ''}`}>
                 <div style={{ display:'flex', gap:6, alignItems:'center' }}>
                   <input
                     className="form-input"
