@@ -1,14 +1,17 @@
 import { useState, useEffect, useRef } from 'react'
 import { useT } from '../../i18n/useLanguage'
 import translations from '../../i18n/translations'
+import { unitLabel } from '../../i18n/units'
 import { useStore, currencySymbol } from '../../store/useStore'
 import { Plus, Check, X } from '@phosphor-icons/react'
 
 export default function QuickAddRow({ stage, onAdd, isOpen, onOpen, onClose }) {
   const { t, lang } = useT()
-  // Same unit list as TaskModal, compact display (short code only)
-  const UNIT_OPTIONS = (translations[lang]?.tasks?.units || translations.en.tasks.units)
-    .map(u => ({ value: u.value, label: u.value || '—' }))
+  // Same unit list as TaskModal, compact display (short code only). Option
+  // values are the canonical English code so it stores/displays correctly
+  // regardless of language, per src/i18n/units.js.
+  const LOCAL_UNITS = translations[lang]?.tasks?.units || translations.en.tasks.units
+  const UNIT_OPTIONS = translations.en.tasks.units.map((u, i) => ({ value: u.value, label: LOCAL_UNITS[i]?.value || '—' }))
   const profile  = useStore(s => s.profile)
   const currSym  = currencySymbol(profile?.currency)
 
@@ -147,7 +150,7 @@ export default function QuickAddRow({ stage, onAdd, isOpen, onOpen, onClose }) {
           value={unitPrice}
           onChange={e => setUnitPrice(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={`${t('tasks.priceShort')}/${unit || t('tasks.unitShort')}`}
+          placeholder={`${t('tasks.priceShort')}/${unitLabel(unit, lang) || t('tasks.unitShort')}`}
           min="0"
           disabled={busy}
           style={{ ...inp, flex:1, minWidth:60 }}

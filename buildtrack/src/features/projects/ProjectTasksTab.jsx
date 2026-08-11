@@ -11,6 +11,7 @@ import { FileText, UploadSimple, DownloadSimple, Printer, ChatCircle, Wrench, X 
 import * as XLSX from 'xlsx'
 import { todayStr } from '../../lib/date'
 import { buildReportHtml } from '../../lib/printReport'
+import { normalizeUnit, unitLabel, displayUnit } from '../../i18n/units'
 
 // Two independent grouping axes share this shape: `stage` = type of work
 // (tasks.stage / projects.stages), `zone` = room or location (tasks.zone /
@@ -243,7 +244,7 @@ export default function ProjectTasksTab({ proj, canDelete = true, canEdit = true
         zone:        iZone     >= 0 ? (c[iZone]     || '') : '',
         text:                          c[iText]     || '',
         description: iDesc     >= 0 ? (c[iDesc]     || '') : '',
-        unit:        iUnit     >= 0 ? (c[iUnit]     || '') : '',
+        unit:        iUnit     >= 0 ? normalizeUnit(c[iUnit] || '') : '',
         quantity:    iQty      >= 0 ? toNum(c[iQty])       : null,
         cost:        iCost     >= 0 ? toNum(c[iCost])      : null,
         currency:    iCurrency >= 0 ? (c[iCurrency] || '$') : '$',
@@ -318,7 +319,7 @@ export default function ProjectTasksTab({ proj, canDelete = true, canEdit = true
           stage,
           tk.text,
           tk.description || '',
-          tk.unit || '',
+          displayUnit(tk.unit, lang) || '',
           tk.quantity != null ? Number(tk.quantity) : '',
           tk.cost    != null ? Number(tk.cost)     : '',
           tk.currency || '',
@@ -427,7 +428,7 @@ export default function ProjectTasksTab({ proj, canDelete = true, canEdit = true
             ${tk.description ? `<div class="desc">${tk.description}</div>` : ''}
             ${commentsHtml}
           </td>
-          <td class="col-unit">${tk.unit || ''}</td>
+          <td class="col-unit">${displayUnit(tk.unit, lang) || ''}</td>
           <td class="col-qty">${tk.quantity != null ? tk.quantity : ''}</td>
           <td class="col-cost">${tk.cost != null ? `${Number(tk.cost).toLocaleString(lang)} ${tk.currency || ''}` : ''}</td>
         </tr>`
@@ -751,7 +752,7 @@ export default function ProjectTasksTab({ proj, canDelete = true, canEdit = true
                       <td style={{ padding:'5px 8px', border:'1px solid var(--border,#EAE3D8)', color:'#888' }}>{r.zone || '—'}</td>
                       <td style={{ padding:'5px 8px', border:'1px solid var(--border,#EAE3D8)', fontWeight:600 }}>{r.text}</td>
                       <td style={{ padding:'5px 8px', border:'1px solid var(--border,#EAE3D8)', color:'#888' }}>{r.description || '—'}</td>
-                      <td style={{ padding:'5px 8px', border:'1px solid var(--border,#EAE3D8)' }}>{r.unit || '—'}</td>
+                      <td style={{ padding:'5px 8px', border:'1px solid var(--border,#EAE3D8)' }}>{unitLabel(r.unit, lang) || '—'}</td>
                       <td style={{ padding:'5px 8px', border:'1px solid var(--border,#EAE3D8)' }}>{r.quantity ?? '—'}</td>
                       <td style={{ padding:'5px 8px', border:'1px solid var(--border,#EAE3D8)' }}>{r.cost != null ? `${r.cost} ${r.currency}` : '—'}</td>
                     </tr>

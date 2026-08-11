@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { X, CaretLeft, CaretRight, CalendarBlank, HardHat, Buildings, PencilSimple, Trash, CaretUp, CaretDown, ArrowCounterClockwise, Package, Check } from '@phosphor-icons/react'
 import { Badge, Button, IconButton } from '../../components/UI'
 import { useT } from '../../i18n/useLanguage'
+import { displayUnit } from '../../i18n/units'
 import { useStore, currencySymbol } from '../../store/useStore'
 import TaskComments from '../../components/TaskComments'
 import MaterialModal from '../../components/MaterialModal'
@@ -150,7 +151,7 @@ function TaskMaterialSection({ task }) {
 
 // ─── TASK ACCORDION CARD ─────────────────────────────────────────────────────
 export default function TaskCard({ t, openId, setOpenId, onEdit, onDelete, onApprove, onReject, onMarkDone, showProject, projects }) {
-  const { t: tr } = useT()
+  const { t: tr, lang } = useT()
   const { role, profile, addMaterialRequest, tasks: storeTasks } = useStore()
   const isOpen = openId === t.id
   const projName = showProject && projects ? projects.find(p => p.id === t.project_id)?.name : null
@@ -190,7 +191,7 @@ export default function TaskCard({ t, openId, setOpenId, onEdit, onDelete, onApp
             {t.zone  && t.zone  !== '—' && <Badge variant="blue">{t.zone}</Badge>}
             {t.quantity != null && t.unit && (
               <span style={{ fontSize:10, background:'var(--info-bg)', color:'var(--info)', borderRadius:5, padding:'1px 6px', fontWeight:600 }}>
-                {t.quantity} {t.unit}
+                {t.quantity} {displayUnit(t.unit, lang)}
               </span>
             )}
             {t.cost != null && (
