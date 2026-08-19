@@ -26,95 +26,6 @@ const CAT_COLORS = {
   other:     { bg: 'var(--cat-other-bg)',     color: 'var(--cat-other-fg)',     border: 'var(--cat-other-bd)',     bar: 'var(--cat-other-bar)'     },
 }
 
-// ── Category Breakdown Chart ────────────────────────────────────────────────
-function CategoryBreakdown({ expenses, onSelect, selected, t }) {
-  const total = expenses.reduce((s, e) => s + Number(e.amount), 0)
-  if (total === 0) return null
-
-  // group by category
-  const groups = CATEGORIES.map(cat => {
-    const items = expenses.filter(e => e.category === cat)
-    const amt   = items.reduce((s, e) => s + Number(e.amount), 0)
-    // pick dominant currency
-    const cur   = items.length > 0 ? (items[0].currency || 'USD') : 'USD'
-    return { cat, amt, count: items.length, pct: total ? Math.round((amt / total) * 100) : 0, cur }
-  }).filter(g => g.count > 0).sort((a, b) => b.amt - a.amt)
-
-  return (
-    <div style={{
-      background: 'var(--surface,#fff)',
-      border: '1.5px solid var(--border,#EAE3D8)',
-      borderRadius: 14, overflow: 'hidden', marginBottom: 14,
-    }}>
-      {/* Stacked bar */}
-      <div style={{ display: 'flex', height: 6 }}>
-        {groups.map(g => (
-          <div key={g.cat} style={{
-            width: `${g.pct}%`, background: CAT_COLORS[g.cat]?.bar,
-            transition: 'width .4s', minWidth: g.pct > 0 ? 2 : 0,
-          }} />
-        ))}
-      </div>
-
-      {/* Category rows */}
-      <div style={{ padding: '4px 0' }}>
-        {groups.map((g, i) => {
-          const c = CAT_COLORS[g.cat] || CAT_COLORS.other
-          const isActive = selected === g.cat
-          return (
-            <div
-              key={g.cat}
-              onClick={() => onSelect(isActive ? 'all' : g.cat)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                padding: '9px 14px',
-                background: isActive ? c.bg : 'transparent',
-                borderBottom: i < groups.length - 1 ? '1px solid var(--border,#F2EDE6)' : 'none',
-                cursor: 'pointer', transition: 'background .15s',
-              }}
-            >
-              {/* Icon */}
-              <div style={{
-                width: 30, height: 30, borderRadius: 8, flexShrink: 0,
-                background: c.bg, border: `1px solid ${c.border}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15,
-              }}>
-                {(() => { const IC = CATEGORY_ICONS[g.cat]; return <IC size={15} weight="bold" /> })()}
-              </div>
-
-              {/* Label + bar */}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: isActive ? c.color : 'var(--text-1,#2E2420)' }}>
-                    {t(`expenses.cat_${g.cat}`)}
-                    <span style={{ fontSize: 10, color: 'var(--text-muted)', marginLeft: 5 }}>({g.count})</span>
-                  </span>
-                  <span style={{ fontSize: 13, fontWeight: 800, color: isActive ? c.color : 'var(--danger)', flexShrink: 0 }}>
-                    {fmtMoney(g.amt, g.cur)}
-                  </span>
-                </div>
-                {/* Progress bar */}
-                <div style={{ height: 4, borderRadius: 2, background: 'var(--border,#EAE3D8)', overflow: 'hidden' }}>
-                  <div style={{
-                    height: '100%', borderRadius: 2,
-                    width: `${g.pct}%`, background: c.bar,
-                    transition: 'width .4s',
-                  }} />
-                </div>
-              </div>
-
-              {/* Percent */}
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', flexShrink: 0, minWidth: 32, textAlign: 'right' }}>
-                {g.pct}%
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
 // ── Single expense card ─────────────────────────────────────────────────────
 function ExpenseCard({ exp, canEdit, onEdit, onDelete, onLightbox, deleting, t }) {
   const colors = CAT_COLORS[exp.category] || CAT_COLORS.other
@@ -192,7 +103,6 @@ function ExpenseCard({ exp, canEdit, onEdit, onDelete, onLightbox, deleting, t }
 export default function ExpensesTab({ proj, canEdit = true }) {
   const { t } = useT()
   const { expenses, fetchExpenses, addExpense, updateExpense, deleteExpense, profile } = useStore()
-  const [filter,      setFilter]      = useState('all')
   const [showAdd,     setShowAdd]     = useState(false)
   const [editExpense, setEditExpense] = useState(null)
   const [lightbox,    setLightbox]    = useState(null)
@@ -213,12 +123,6 @@ export default function ExpensesTab({ proj, canEdit = true }) {
     .map(([cur, amt]) => fmtMoney(amt, cur))
     .join(' + ') || fmtMoney(0, profileCurrency)
 
-  // Filtered list
-  const filtered = filter === 'all'
-    ? projExpenses
-    : projExpenses.filter(e => e.category === filter)
-
-  // Grouped view (when filter === 'all')
   const groups = CATEGORIES.map(cat => {
     const items = projExpenses.filter(e => e.category === cat)
     return {
@@ -258,21 +162,11 @@ export default function ExpensesTab({ proj, canEdit = true }) {
         )}
       </div>
 
-      {/* ── Category breakdown chart (always visible when data exists) ── */}
-      {projExpenses.length > 0 && (
-        <CategoryBreakdown
-          expenses={projExpenses}
-          selected={filter}
-          onSelect={setFilter}
-          t={t}
-        />
-      )}
-
       {/* ── Empty state ── */}
       {projExpenses.length === 0 && <EmptyState>{t('expenses.empty')}</EmptyState>}
 
-      {/* ── Grouped view (when filter = all) ── */}
-      {filter === 'all' && groups.length > 0 && (
+      {/* ── Grouped view ── */}
+      {groups.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {groups.map(({ cat, items, total, cur }) => {
             const c      = CAT_COLORS[cat] || CAT_COLORS.other
@@ -323,16 +217,6 @@ export default function ExpensesTab({ proj, canEdit = true }) {
               </div>
             )
           })}
-        </div>
-      )}
-
-      {/* ── Flat filtered view (when a category is selected) ── */}
-      {filter !== 'all' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {filtered.length === 0
-            ? <EmptyState>{t('expenses.emptyFilter')}</EmptyState>
-            : filtered.map(exp => <ExpenseCard key={exp.id} exp={exp} {...cardProps} />)
-          }
         </div>
       )}
 
