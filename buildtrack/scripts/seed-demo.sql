@@ -52,8 +52,8 @@ WITH ins AS (
     '906c78be-4cae-4b64-a6ba-02008469363c',
     '14 Maple Street, Apt 3B',
     CURRENT_DATE + INTERVAL '21 days',
-    ARRAY['Demolition','Plastering','Electrical','Tiling','Painting','Cleaning'],
-    ARRAY['Corridor','Kitchen','Bathroom','Living room','Balcony'],
+    '["Demolition","Plastering","Electrical","Tiling","Painting","Cleaning"]'::jsonb,
+    '["Corridor","Kitchen","Bathroom","Living room","Balcony"]'::jsonb,
     0
   )
   RETURNING id
