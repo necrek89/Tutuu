@@ -8,6 +8,7 @@ import { useAsyncGuard } from '../lib/useAsyncGuard'
 import { subscribeToPush, unsubscribeFromPush, isSubscribed, isPushSupported } from '../lib/push'
 import { PLANS, computeIsLocked, getTrialDaysLeft, fmtPrice, openBillingPortal } from '../lib/billing'
 import { isPaddleConfigured, openCheckout } from '../lib/paddle'
+import { ALL_UNIT_CODES, unitLabel } from '../i18n/units'
 
 const AVATAR_COLORS = [
   'var(--accent)','var(--success)','#D4A843','#4A7FC1','#9B6B9B',
@@ -47,8 +48,8 @@ function JoinForeman({ t }) {
 
 export default function AccountPage() {
   const { profile, fetchProfile } = useStore()
-  const { t } = useT()
-  const [form,    setForm]    = useState({ name:'', phone:'', company:'', currency:'USD' })
+  const { t, lang } = useT()
+  const [form,    setForm]    = useState({ name:'', phone:'', company:'', currency:'USD', unit_prefs:[] })
   const [avatarColor, setAvatarColor] = useState('var(--accent)')
   const [uploadingPhoto, photoGuard] = useAsyncGuard()
   const [avatarUrl, setAvatarUrl] = useState(null)
@@ -96,7 +97,7 @@ export default function AccountPage() {
 
   useEffect(() => {
     if (profile) {
-      setForm({ name: profile.name||'', phone: profile.phone||'', company: profile.company||'', currency: profile.currency || 'USD' })
+      setForm({ name: profile.name||'', phone: profile.phone||'', company: profile.company||'', currency: profile.currency || 'USD', unit_prefs: profile.unit_prefs || [] })
       setAvatarColor(profile.avatar_color || 'var(--accent)')
       setAvatarUrl(profile.avatar_url || null)
     }
@@ -104,10 +105,19 @@ export default function AccountPage() {
 
   const set = (field) => (e) => setForm(f => ({ ...f, [field]: e.target.value }))
 
+  // Empty unit_prefs means "not customized yet — show every unit" (see
+  // src/i18n/units.js). The first toggle has to materialize that implicit
+  // full set before removing/adding one, or unchecking a unit that's only
+  // "on" by default would silently add it as an explicit single entry.
+  const toggleUnit = (code) => setForm(f => {
+    const current = f.unit_prefs.length ? f.unit_prefs : ALL_UNIT_CODES
+    return { ...f, unit_prefs: current.includes(code) ? current.filter(c => c !== code) : [...current, code] }
+  })
+
   const saveProfile = () => profile?.id && saveGuard(async () => {
     setMsg(''); setMsgOk(true)
     const { error } = await supabase.from('profiles')
-      .update({ name: form.name, phone: form.phone, company: form.company, avatar_color: avatarColor, currency: form.currency })
+      .update({ name: form.name, phone: form.phone, company: form.company, avatar_color: avatarColor, currency: form.currency, unit_prefs: form.unit_prefs.length ? form.unit_prefs : null })
       .eq('id', profile.id)
     if (error) { setMsg(t('account.msgError', { err: error.message })); setMsgOk(false) }
     else { setMsg(t('account.msgSaved')); setMsgOk(true); fetchProfile?.() }
@@ -249,6 +259,36 @@ export default function AccountPage() {
           ))}
         </div>
         <div style={{ marginTop: msg ? 16 : 0 }}><Alert ok={msgOk} dense>{msg}</Alert></div>
+        <div style={{ borderTop:'0.5px solid var(--border)', marginTop:16, paddingTop:16 }}>
+          <Button variant="primary" onClick={saveProfile} disabled={saving}>
+            {saving ? t('common.saving') : t('account.saveBtn')}
+          </Button>
+        </div>
+      </div>
+
+      {/* ── Units ── */}
+      <div className="card card-body" style={{ marginBottom:12 }}>
+        <div className="section-title">{t('account.unitsSection')}</div>
+        <p style={{ fontSize:12, color:'var(--text-secondary)', marginBottom:12, lineHeight:1.5 }}>
+          {t('account.unitsDesc')}
+        </p>
+        <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
+          {ALL_UNIT_CODES.map(code => {
+            const active = form.unit_prefs.length === 0 || form.unit_prefs.includes(code)
+            return (
+              <button key={code} onClick={() => toggleUnit(code)} style={{
+                padding:'8px 14px', borderRadius:8, cursor:'pointer',
+                background: active ? 'var(--accent)' : 'var(--bg)',
+                color: active ? '#fff' : 'var(--text-secondary)',
+                border: active ? '1.5px solid var(--accent)' : '0.5px solid var(--border-medium)',
+                fontSize:13, fontWeight: active ? 500 : 400,
+                transition:'all .1s',
+              }}>
+                {unitLabel(code, lang)}
+              </button>
+            )
+          })}
+        </div>
         <div style={{ borderTop:'0.5px solid var(--border)', marginTop:16, paddingTop:16 }}>
           <Button variant="primary" onClick={saveProfile} disabled={saving}>
             {saving ? t('common.saving') : t('account.saveBtn')}

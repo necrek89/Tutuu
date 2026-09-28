@@ -34,3 +34,21 @@ export function unitLabel(code, lang) {
 export function displayUnit(raw, lang) {
   return unitLabel(normalizeUnit(raw), lang)
 }
+
+// Every real unit code, in canonical (English) order — the master list the
+// Settings page offers to show/hide, and the fallback when a profile hasn't
+// customized anything.
+export const ALL_UNIT_CODES = CANON.filter(u => u.value).map(u => u.value)
+
+// Cuts a full {value,label} options array down to what this profile chose
+// to see (profiles.unit_prefs), so an American crew isn't scrolling past
+// cm/m/km every time and vice versa. No prefs saved yet -> show everything
+// (unchanged default behavior). Always keeps the blank "no unit" choice and
+// whatever's currently selected, even if the user later hid that unit from
+// their list — hiding a unit must never silently blank out a saved task.
+export function filterUnitOptions(options, prefs, currentValue) {
+  if (!prefs || prefs.length === 0) return options
+  const keep = new Set(prefs)
+  if (currentValue) keep.add(currentValue)
+  return options.filter(o => !o.value || keep.has(o.value))
+}
