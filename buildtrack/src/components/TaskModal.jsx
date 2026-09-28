@@ -3,7 +3,7 @@ import { Hourglass, X, Warning, CaretDown, CaretUp } from '@phosphor-icons/react
 import { useStore, currencySymbol } from '../store/useStore'
 import { useT } from '../i18n/useLanguage'
 import translations from '../i18n/translations'
-import { normalizeUnit, unitLabel } from '../i18n/units'
+import { normalizeUnit, unitLabel, filterUnitOptions } from '../i18n/units'
 import { Button, FormGroup, Modal } from './UI'
 import { supabase } from '../lib/supabase'
 import DatePicker from './DatePicker'
@@ -131,7 +131,6 @@ export default function TaskModal({ task, onClose, defaultProjectId }) {
   // it displays correctly regardless of which language created/views it);
   // labels are localized for whoever's picking right now.
   const LOCAL_UNITS = translations[lang]?.tasks?.units || translations.en.tasks.units
-  const UNIT_OPTIONS = translations.en.tasks.units.map((u, i) => ({ value: u.value, label: LOCAL_UNITS[i]?.label || u.label }))
   const { addTask, updateTask, fetchTasks, projects, fetchProjects, fetchWorkers, profile, updateProject } = useStore()
   const isEdit = !!task
   const [workers,   setWorkers]   = useState([])
@@ -155,6 +154,12 @@ export default function TaskModal({ task, onClose, defaultProjectId }) {
     cost:        task?.cost        || '',
     currency:    task?.currency    || useStore.getState().profile?.currency || 'USD',
   })
+
+  const UNIT_OPTIONS = filterUnitOptions(
+    translations.en.tasks.units.map((u, i) => ({ value: u.value, label: LOCAL_UNITS[i]?.label || u.label })),
+    profile?.unit_prefs,
+    form.unit
+  )
 
   // Unit price helper (not saved to DB — cost = quantity × unitPrice)
   const [unitPrice, setUnitPrice] = useState(() => {
