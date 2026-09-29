@@ -10,6 +10,41 @@ import * as XLSX from 'xlsx'
 import TimesheetModal from './TimesheetModal'
 import { todayStr } from '../../lib/date'
 
+// ─── inline month/year picker for a report button ───────────────────────────
+// Opens right under whichever button triggered it, so picking a period never
+// requires hunting for a control somewhere else on the page.
+function ReportMonthPicker({ month, year, onMonth, onYear, onGenerate, onClose, lang, showMonth, t }) {
+  return (
+    <>
+      <div style={{ position:'fixed', inset:0, zIndex:99 }} onClick={onClose} />
+      <div style={{
+        position:'absolute', top:'calc(100% + 4px)', left:0, zIndex:100,
+        background:'var(--bg,#fff)', border:'0.5px solid var(--border-medium)',
+        borderRadius:10, boxShadow:'0 4px 20px rgba(0,0,0,0.10)', padding:8,
+        display:'flex', gap:6, alignItems:'center', whiteSpace:'nowrap',
+      }}>
+        {showMonth && (
+          <select value={month} onChange={e => onMonth(Number(e.target.value))}
+            style={{ fontSize:11, padding:'5px 6px', borderRadius:6, border:'0.5px solid var(--border-medium)', background:'var(--bg)', color:'var(--text-primary)' }}>
+            {Array.from({length:12}, (_, i) => new Intl.DateTimeFormat(lang, {month:'short'}).format(new Date(2000, i, 1))).map((mn, i) => (
+              <option key={i} value={i + 1}>{mn}</option>
+            ))}
+          </select>
+        )}
+        <select value={year} onChange={e => onYear(Number(e.target.value))}
+          style={{ fontSize:11, padding:'5px 6px', borderRadius:6, border:'0.5px solid var(--border-medium)', background:'var(--bg)', color:'var(--text-primary)', width:58 }}>
+          {[new Date().getFullYear() - 1, new Date().getFullYear()].map(y => (
+            <option key={y} value={y}>{y}</option>
+          ))}
+        </select>
+        <button onClick={onGenerate} style={{ fontSize:11, fontWeight:600, padding:'5px 10px', borderRadius:6, background:'var(--accent)', color:'#fff', border:'none', cursor:'pointer' }}>
+          {t('common.open')}
+        </button>
+      </div>
+    </>
+  )
+}
+
 // ─── WORKER STATUS CONFIG ────────────────────────────────────────────────────
 const WORKER_STATUS = {
   on_site:   { label: 'On Site',       color: 'var(--success)',  bg: 'var(--success-bg)',  border: 'var(--success-border)',          dot: 'var(--success)'  },
@@ -51,6 +86,12 @@ export default function Team() {
   const now = new Date()
   const [reportMonth, setReportMonth] = useState(now.getMonth() + 1)
   const [reportYear,  setReportYear]  = useState(now.getFullYear())
+  // Per-worker "which month/year to report on" popover — keeps its own
+  // month/year so picking one doesn't touch the unrelated page-header
+  // selector, and vice versa (that's the bug this replaces).
+  const [reportPicker, setReportPicker] = useState(null) // { workerId, mode: 'monthly'|'annual' } | null
+  const [pickMonth, setPickMonth] = useState(now.getMonth() + 1)
+  const [pickYear,  setPickYear]  = useState(now.getFullYear())
   const currSym = currencySymbol(profile?.currency)
 
   useEffect(() => {
@@ -823,14 +864,41 @@ export default function Team() {
                           <div style={{ fontSize: 10, fontWeight: 500, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
                             {t('team.salarySection')}
                           </div>
-                          <button
-                            onClick={() => generateMonthlyReport(reportMonth, reportYear, m.id)}
-                            style={{ fontSize: 10, color: 'var(--text-secondary)', background: 'var(--bg)', border: '0.5px solid var(--border)', borderRadius: 5, padding: '2px 7px', cursor: 'pointer', display:'flex', alignItems:'center', gap:3 }}
-                          ><File size={10} weight="bold" /> {t('team.monthlyReport')}</button>
-                          <button
-                            onClick={() => generateAnnualReport(reportYear, m.id)}
-                            style={{ fontSize: 10, color: 'var(--text-secondary)', background: 'var(--bg)', border: '0.5px solid var(--border)', borderRadius: 5, padding: '2px 7px', cursor: 'pointer', display:'flex', alignItems:'center', gap:3 }}
-                          ><ChartBar size={10} weight="bold" /> {t('team.annualReport')}</button>
+                          <div style={{ position:'relative' }}>
+                            <button
+                              onClick={() => {
+                                setPickMonth(reportPicker?.workerId === m.id && reportPicker.mode === 'monthly' ? pickMonth : now.getMonth() + 1)
+                                setPickYear(reportPicker?.workerId === m.id && reportPicker.mode === 'monthly' ? pickYear : now.getFullYear())
+                                setReportPicker(p => (p?.workerId === m.id && p.mode === 'monthly') ? null : { workerId: m.id, mode: 'monthly' })
+                              }}
+                              style={{ fontSize: 10, color: 'var(--text-secondary)', background: 'var(--bg)', border: '0.5px solid var(--border)', borderRadius: 5, padding: '2px 7px', cursor: 'pointer', display:'flex', alignItems:'center', gap:3 }}
+                            ><File size={10} weight="bold" /> {t('team.monthlyReport')}</button>
+                            {reportPicker?.workerId === m.id && reportPicker.mode === 'monthly' && (
+                              <ReportMonthPicker
+                                month={pickMonth} year={pickYear} lang={lang} t={t} showMonth
+                                onMonth={setPickMonth} onYear={setPickYear}
+                                onClose={() => setReportPicker(null)}
+                                onGenerate={() => { generateMonthlyReport(pickMonth, pickYear, m.id); setReportPicker(null) }}
+                              />
+                            )}
+                          </div>
+                          <div style={{ position:'relative' }}>
+                            <button
+                              onClick={() => {
+                                setPickYear(reportPicker?.workerId === m.id && reportPicker.mode === 'annual' ? pickYear : now.getFullYear())
+                                setReportPicker(p => (p?.workerId === m.id && p.mode === 'annual') ? null : { workerId: m.id, mode: 'annual' })
+                              }}
+                              style={{ fontSize: 10, color: 'var(--text-secondary)', background: 'var(--bg)', border: '0.5px solid var(--border)', borderRadius: 5, padding: '2px 7px', cursor: 'pointer', display:'flex', alignItems:'center', gap:3 }}
+                            ><ChartBar size={10} weight="bold" /> {t('team.annualReport')}</button>
+                            {reportPicker?.workerId === m.id && reportPicker.mode === 'annual' && (
+                              <ReportMonthPicker
+                                year={pickYear} lang={lang} t={t} showMonth={false}
+                                onYear={setPickYear}
+                                onClose={() => setReportPicker(null)}
+                                onGenerate={() => { generateAnnualReport(pickYear, m.id); setReportPicker(null) }}
+                              />
+                            )}
+                          </div>
                         </div>
                         <button
                           onClick={() => setShowLogForm(prev => prev === m.id ? null : m.id)}
