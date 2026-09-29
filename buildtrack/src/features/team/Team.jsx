@@ -999,6 +999,17 @@ export default function Team() {
                                     </span>
                                     <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{monthLogs.length} {t('team.entriesLabel')}</span>
                                     <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent)', marginLeft: 6 }}>{monthTotal.toLocaleString()} {currSym}</span>
+                                    {monthKey !== '__unknown__' && (
+                                      <button
+                                        onClick={e => {
+                                          e.stopPropagation()
+                                          const [yr, mo] = monthKey.split('-')
+                                          generateMonthlyReport(Number(mo), Number(yr), m.id)
+                                        }}
+                                        title={t('team.monthlyReport')}
+                                        style={{ fontSize: 10, color: 'var(--text-secondary)', background: 'var(--bg)', border: '0.5px solid var(--border)', borderRadius: 5, padding: '2px 6px', marginLeft: 6, cursor: 'pointer', display:'flex', alignItems:'center' }}
+                                      ><File size={10} weight="bold" /></button>
+                                    )}
                                     <span style={{ fontSize: 10, color: 'var(--text-muted)', marginLeft: 4, display:'flex', alignItems:'center' }}>{isMonthOpen ? <CaretUp size={10} weight="bold" /> : <CaretDown size={10} weight="bold" />}</span>
                                   </div>
 
