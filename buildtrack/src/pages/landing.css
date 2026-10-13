@@ -491,6 +491,26 @@
   position: relative; overflow: hidden;
 }
 
+/* Links that used to be buttons/spans: real anchors so crawlers can follow them. */
+.ldg a.ld-nav-link,
+.ldg a.ld-btn-nav,
+.ldg a.ld-btn-p,
+.ldg a.ld-btn-s,
+.ldg a.ld-cta-btn,
+.ldg a.ld-plat,
+.ldg a.ld-logo { text-decoration: none }
+.ldg a.ld-btn-nav,
+.ldg a.ld-btn-p,
+.ldg a.ld-btn-s,
+.ldg a.ld-cta-btn { display: inline-block; box-sizing: border-box; font-family: inherit; line-height: normal; text-align: center }
+.ldg a.ld-plat { color: inherit }
+.ldg .ld-footer-links a { color: inherit; text-decoration: none; cursor: pointer }
+.ldg .ld-footer-links a:hover { color: var(--ld-ink) }
+.ldg .ld-footer-langs { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px }
+.ldg .ld-footer-langs a { color: inherit; text-decoration: none }
+.ldg .ld-footer-langs a:hover,
+.ldg .ld-footer-langs a.on { color: var(--ld-ink) }
+
 /* ── Footer ── */
 .ldg .ld-footer {
   padding: 24px 40px; border-top: 0.5px solid var(--ld-border);

@@ -1,6 +1,6 @@
-// Paddle.js is loaded via a <script> tag in index.html (same style as the
-// service-worker registration already there) — this module only deals with
-// initializing it and opening checkout. Every function here is a safe no-op
+// Paddle.js is loaded on demand (loadPaddle) so the landing and the rest of the
+// site don't pay for it; only the Account page, where checkout lives, calls it.
+// This module also deals with initializing it and opening checkout. Every function here is a safe no-op
 // until real Paddle env vars exist, so the billing UI can ship now without
 // a live Paddle account.
 
@@ -20,6 +20,26 @@ const PRICE_IDS = {
 
 export function isPaddleConfigured() {
   return !!CLIENT_TOKEN
+}
+
+const PADDLE_SRC = 'https://cdn.paddle.com/paddle/v2/paddle.js'
+let loading = null
+
+// Injects paddle.js once. Resolves when window.Paddle exists (or on failure,
+// so callers never hang; openCheckout simply returns false until it is ready).
+export function loadPaddle() {
+  if (typeof window === 'undefined' || !isPaddleConfigured()) return Promise.resolve(false)
+  if (window.Paddle) return Promise.resolve(true)
+  if (loading) return loading
+  loading = new Promise((resolve) => {
+    const el = document.createElement('script')
+    el.src = PADDLE_SRC
+    el.async = true
+    el.onload = () => resolve(true)
+    el.onerror = () => { loading = null; resolve(false) }
+    document.head.appendChild(el)
+  })
+  return loading
 }
 
 export function getPriceId(plan, period) {

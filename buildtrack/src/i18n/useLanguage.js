@@ -17,7 +17,10 @@ export const LANGUAGES = [
 
 const SUPPORTED = LANGUAGES.map(l => l.code)
 
+// Also runs during the build-time prerender (Node, no browser globals), where
+// it falls back to English.
 function detect() {
+  if (typeof localStorage === 'undefined' || typeof navigator === 'undefined') return 'en'
   const saved = localStorage.getItem(LS_KEY)
   if (saved && SUPPORTED.includes(saved)) return saved
   const browser = (navigator.language || 'en').slice(0, 2).toLowerCase()

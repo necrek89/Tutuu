@@ -1,9 +1,7 @@
 import { useT, LANGUAGES } from '../i18n/useLanguage'
 import translations from '../i18n/translations'
-import { useStore } from '../store/useStore'
+import { useSiteTheme } from './useSiteTheme'
 import './landing.css'
-
-function nav(to) { window.__navigate?.(to) }
 
 // Step icons: what the user actually looks for on their screen
 const STEP_ICONS = {
@@ -39,7 +37,7 @@ function Steps({ steps }) {
 
 export default function InstallPage() {
   const { lang, setLang } = useT()
-  const { theme, toggleTheme } = useStore()
+  const { theme, toggleTheme } = useSiteTheme()
   const l = translations[lang]?.landing || translations.en.landing
 
   const iosSteps = [
@@ -60,7 +58,7 @@ export default function InstallPage() {
 
       {/* ── NAV ── */}
       <nav className="ld-nav">
-        <div className="ld-logo" onClick={() => nav('/')} style={{ cursor: 'pointer' }}>tutuu<em>.</em></div>
+        <a className="ld-logo" href="/">tutuu<em>.</em></a>
         <div className="ld-nav-r">
           <button className="ld-theme-btn" onClick={toggleTheme} title={theme === 'dark' ? 'Light mode' : 'Dark mode'}>
             {theme === 'dark'
@@ -71,8 +69,8 @@ export default function InstallPage() {
           <select className="ld-lang" value={lang} onChange={e => setLang(e.target.value)}>
             {LANGUAGES.map(lg => <option key={lg.code} value={lg.code}>{lg.label}</option>)}
           </select>
-          <button className="ld-nav-link" onClick={() => nav('/')}>{(translations[lang]?.common || translations.en.common).back}</button>
-          <button className="ld-btn-nav" onClick={() => nav('/app')}>{l.navStart}</button>
+          <a className="ld-nav-link" href="/">{(translations[lang]?.common || translations.en.common).back}</a>
+          <a className="ld-btn-nav" href="/app">{l.navStart}</a>
         </div>
       </nav>
 
@@ -115,7 +113,7 @@ export default function InstallPage() {
         </div>
 
         <div style={{ textAlign: 'center', marginTop: 32 }}>
-          <button className="ld-btn-p" onClick={() => nav('/app')}>{l.instCta}</button>
+          <a className="ld-btn-p" href="/app">{l.instCta}</a>
         </div>
       </div>
     </div>

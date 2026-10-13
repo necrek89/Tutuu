@@ -1,10 +1,8 @@
 import { useState } from 'react'
 import { useT } from '../i18n/useLanguage'
 import translations from '../i18n/translations'
-import { PLANS, fmtPrice } from '../lib/billing'
+import { PLANS, fmtPrice } from '../lib/plans'
 import './landing.css'
-
-function nav(to) { window.__navigate?.(to) }
 
 // Standalone, deep-linkable version of the landing page's PricingModal —
 // Paddle's domain-verification flow requires a direct URL to a pricing page,
@@ -21,8 +19,8 @@ export default function PricingPage() {
   return (
     <div className="ldg">
       <header className="ld-nav">
-        <div className="ld-logo" onClick={() => nav('/')} style={{ cursor: 'pointer' }}>tutuu<em>.</em></div>
-        <div className="ld-nav-link" onClick={() => nav('/')}>← Back to home</div>
+        <a className="ld-logo" href="/">tutuu<em>.</em></a>
+        <a className="ld-nav-link" href="/">← Back to home</a>
       </header>
 
       <div style={{ maxWidth: 640, margin: '0 auto', padding: '64px 24px 96px', textAlign: 'center' }}>
@@ -59,16 +57,17 @@ export default function PricingPage() {
 
         <p style={{ fontSize: 13, color: 'var(--ld-muted)', marginBottom: 20 }}>{l.trialNote}</p>
 
-        <button
-          onClick={() => nav('/app')}
+        <a
+          href="/app"
           style={{
+            display: 'inline-block', textDecoration: 'none',
             background: 'var(--ld-orange)', color: '#fff', border: 'none',
             borderRadius: 8, padding: '13px 40px', fontSize: 14,
             fontWeight: 500, cursor: 'pointer',
           }}
         >
           {l.pricingCta}
-        </button>
+        </a>
       </div>
     </div>
   )

@@ -1,5 +1,7 @@
 User-agent: *
 Allow: /
-Disallow: /app
+
+# The app itself (/app) is not for search: it carries a noindex tag and header.
+# It is left crawlable on purpose, so that tag is actually read.
 
 Sitemap: https://tutuu.net/sitemap.xml

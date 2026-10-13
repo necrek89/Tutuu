@@ -7,7 +7,7 @@ import { supabase } from '../lib/supabase'
 import { useAsyncGuard } from '../lib/useAsyncGuard'
 import { subscribeToPush, unsubscribeFromPush, isSubscribed, isPushSupported } from '../lib/push'
 import { PLANS, computeIsLocked, getTrialDaysLeft, fmtPrice, openBillingPortal } from '../lib/billing'
-import { isPaddleConfigured, openCheckout } from '../lib/paddle'
+import { isPaddleConfigured, openCheckout, loadPaddle } from '../lib/paddle'
 import { ALL_UNIT_CODES, unitLabel } from '../i18n/units'
 
 const AVATAR_COLORS = [
@@ -67,6 +67,9 @@ export default function AccountPage() {
   const [pushEnabled,   setPushEnabled]   = useState(false)
   const [pushLoading,   setPushLoading]   = useState(false)
   const [pushDenied,    setPushDenied]    = useState(false)
+
+  // Paddle's script is no longer on every page; fetch it when checkout can happen.
+  useEffect(() => { loadPaddle() }, [])
 
   useEffect(() => {
     isPushSupported().then(supported => {

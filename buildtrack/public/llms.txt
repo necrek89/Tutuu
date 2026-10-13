@@ -1,8 +1,49 @@
 # Tutuu
 
-> Tutuu is a web app for managing small construction crews — task assignment and tracking, material requests, tool tracking, attendance and salary calculation, photo documentation and PDF invoices, all in one place. Free to start, works on any phone.
+> Tutuu is a web app for managing small construction crews: task assignment and tracking, material requests, tool tracking, attendance and salary calculation, photo documentation and PDF invoices, all in one place. Free to start, works on any phone, no app store needed.
+
+Tutuu is built for foremen and small contractor crews. A foreman creates projects, adds workers and assigns tasks by stage with deadlines. Workers see what to do on their own phone, send photos and request materials. The foreman reviews and approves finished work, tracks attendance, calculates salary and generates PDF invoices.
+
+## Features
+
+- Task assignment and tracking: create tasks by stage, assign workers, set deadlines, review and approve finished work.
+- Material requests: workers request materials in the app and the foreman sees every request in one place.
+- Attendance and salary: mark attendance in 10 seconds, set a rate per shift or per hour, salary is calculated automatically, timesheet export.
+- Tool tracking: know who has which expensive tool, on which site, since when.
+- Photo documentation: workers upload progress photos straight to the project.
+- PDF invoices: generate a professional invoice in one tap.
+- Works as an installable web app (PWA) on iPhone and Android, with push notifications.
+
+## Pricing
+
+- 30-day free trial, no credit card required.
+- Standard: $29 per month. Up to 10 workers and up to 3 active projects.
+- Pro: $59 per month. Unlimited workers and projects.
+- Annual billing saves 20%.
 
 ## Pages
 
-- [Home](https://tutuu.net/): Product overview, features and sign-up
+- [Home (English)](https://tutuu.net/): Product overview, features and sign-up
+- [Pricing](https://tutuu.net/pricing): Plans and prices
 - [Install guide](https://tutuu.net/install): How to add Tutuu to your home screen on iPhone and Android
+- [Terms of Service](https://tutuu.net/terms)
+- [Privacy Policy](https://tutuu.net/privacy)
+- [Refund Policy](https://tutuu.net/refund)
+
+## Other languages
+
+The home page is available in nine languages, each at its own URL:
+
+- [Русский](https://tutuu.net/ru)
+- [Srpski](https://tutuu.net/sr)
+- [Español](https://tutuu.net/es)
+- [Português](https://tutuu.net/pt)
+- [Deutsch](https://tutuu.net/de)
+- [Français](https://tutuu.net/fr)
+- [Slovenčina](https://tutuu.net/sk)
+- [Čeština](https://tutuu.net/cs)
+
+## Optional
+
+- [Sign in or create an account](https://tutuu.net/app): the app itself (requires an account, not indexed)
+- [Sitemap](https://tutuu.net/sitemap.xml)

@@ -6,15 +6,16 @@
     <meta name="theme-color" content="#EA580C" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Tutuu" />
-    <title>Tutuu — Construction Crew Management App</title>
-    <meta name="description" content="Track tasks, tools, attendance and salary for your construction crew. Free to start. Works on any phone." />
-    <meta property="og:title" content="Tutuu — Run your crew, not your paperwork" />
-    <meta property="og:description" content="From task assignment to salary calculation — everything in one app for small construction crews." />
-    <meta name="keywords" content="construction crew management, contractor app, construction task tracking, tool tracking, attendance construction" />
+    <script>
+      // Same rule the app store uses (dark unless 'light' was saved), applied
+      // before first paint so the public pages don't flash the wrong theme.
+      try { if (localStorage.getItem('tutuu_theme') === 'light') document.documentElement.setAttribute('data-theme', 'light') } catch (e) {}
+    </script>
+    <title>Tutuu</title>
+    <!--app-head-->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.json" />
-    <script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script>
   </head>
   <body>
     <div id="root"></div>

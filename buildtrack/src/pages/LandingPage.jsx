@@ -1,11 +1,14 @@
 import { useState, useEffect, useRef } from 'react'
-import { useT, LANGUAGES } from '../i18n/useLanguage'
+import { useLang, LANGUAGES } from '../i18n/useLanguage'
 import translations from '../i18n/translations'
-import { supabase } from '../lib/supabase'
-import { useStore } from '../store/useStore'
+import { landingPath } from '../seo/siteMeta'
+import { useSiteTheme } from './useSiteTheme'
 import './landing.css'
 
-function nav(to) { window.__navigate?.(to) }
+// The landing is prerendered at build time (scripts/prerender.mjs), so this file
+// must stay free of browser-only work at render time and must not import the
+// app store or the Supabase client at module level. Browser things happen in
+// effects; the live-stats client is loaded lazily.
 
 // ── Inline stroke icons (marquee + bento + mockup nav) ───────────────────────
 const ICONS = {
@@ -370,17 +373,24 @@ function MockupLightbox({ screens, startIndex, onClose }) {
 // Crew counter: grows by one per day, capped at 300.
 const CREW_START = Date.UTC(2026, 5, 1) // Jun 1, 2026
 const CREW_BASE = 220
-function crewCount() {
-  const days = Math.max(0, Math.floor((Date.now() - CREW_START) / 86400000))
+function crewCount(now = Date.now()) {
+  const days = Math.max(0, Math.floor((now - CREW_START) / 86400000))
   return Math.min(300, CREW_BASE + days)
 }
+// Same value on the server and in the browser's first render (both are built
+// the same day), so hydration matches; the real day count is applied on mount.
+// eslint-disable-next-line no-undef
+const BUILD_DAY = typeof __BUILD_DAY__ !== 'undefined' ? __BUILD_DAY__ : null
+const buildTimeCrew = () => crewCount(BUILD_DAY ? Date.parse(BUILD_DAY) : Date.now())
 
 // ── MAIN LANDING PAGE ────────────────────────────────────────────────────────
-export default function LandingPage() {
-  const { lang, setLang } = useT()
-  const { theme, toggleTheme } = useStore()
+export default function LandingPage({ lang: langProp }) {
+  const storeLang = useLang(s => s.lang)
+  const lang = langProp || storeLang
   const l = translations[lang]?.landing || translations.en.landing
   const [stats, setStats] = useState(null)
+  const [crew, setCrew] = useState(buildTimeCrew)
+  const { theme, toggleTheme } = useSiteTheme()
   const [lightboxIdx, setLightboxIdx] = useState(null)
   // Same order as rendered in .ld-phones below — real PNG captures of each
   // screen, see public/mockups/
@@ -394,12 +404,38 @@ export default function LandingPage() {
   // The ticker is only rendered once real data arrives.
   useEffect(() => {
     let cancelled = false
-    supabase.rpc('landing_stats').then(({ data, error }) => {
-      if (cancelled || error || !data) return
-      setStats(data)
-    })
+    import('../lib/supabase').then(({ supabase }) =>
+      supabase.rpc('landing_stats').then(({ data, error }) => {
+        if (cancelled || error || !data) return
+        setStats(data)
+      })
+    ).catch(() => {})
     return () => { cancelled = true }
   }, [])
+
+  // Browser-only state, applied after the first (prerendered) render.
+  useEffect(() => {
+    setCrew(crewCount())
+    document.documentElement.lang = lang
+    // Opening a language URL such as /es counts as choosing that language, so
+    // the app opened from here speaks it too. English is the default and is
+    // only stored when picked explicitly in the selector.
+    if (langProp && langProp !== 'en') {
+      try { localStorage.setItem('tutuu_lang', langProp) } catch { /* storage blocked */ }
+      useLang.setState({ lang: langProp })
+    }
+  }, [lang, langProp])
+
+  // Language pages are real URLs (/es, /ru, ...): picking one saves the choice
+  // and goes there.
+  const goToLanguage = (code) => {
+    try { localStorage.setItem('tutuu_lang', code) } catch { /* storage blocked */ }
+    window.location.assign(landingPath(code))
+  }
+  const scrollToFeatures = (e) => {
+    e.preventDefault()
+    document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })
+  }
 
   const onCardMove = (e) => {
     const card = e.currentTarget
@@ -440,11 +476,11 @@ export default function LandingPage() {
               : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
             }
           </button>
-          <select className="ld-lang" value={lang} onChange={e => setLang(e.target.value)}>
+          <select className="ld-lang" value={lang} onChange={e => goToLanguage(e.target.value)} aria-label="Language">
             {LANGUAGES.map(lg => <option key={lg.code} value={lg.code}>{lg.label}</option>)}
           </select>
-          <button className="ld-nav-link" onClick={() => nav('/app')}>{l.navSignin}</button>
-          <button className="ld-btn-nav" onClick={() => nav('/app')}>{l.navStart}</button>
+          <a className="ld-nav-link" href="/app">{l.navSignin}</a>
+          <a className="ld-btn-nav" href="/app">{l.navStart}</a>
         </div>
       </nav>
 
@@ -462,8 +498,8 @@ export default function LandingPage() {
           <p className="ld-sub">{l.sub}</p>
 
           <div className="ld-btns">
-            <button className="ld-btn-p" onClick={() => nav('/app')}>{l.ctaHero}</button>
-            <button className="ld-btn-s" onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}>{l.how}</button>
+            <a className="ld-btn-p" href="/app">{l.ctaHero}</a>
+            <a className="ld-btn-s" href="#features" onClick={scrollToFeatures}>{l.how}</a>
           </div>
 
           {/* Social proof */}
@@ -471,7 +507,7 @@ export default function LandingPage() {
             {avatars.map((a, i) => (
               <div key={i} className="ld-av" style={{ background: a.color }}>{a.txt}</div>
             ))}
-            <span className="ld-av-label">{l.join1} <strong>{crewCount()}+ {l.join2}</strong></span>
+            <span className="ld-av-label">{l.join1} <strong>{crew}+ {l.join2}</strong></span>
           </div>
 
           {/* Number ticker — live counts from the DB */}
@@ -485,7 +521,7 @@ export default function LandingPage() {
 
           {/* Platforms */}
           <div className="ld-platforms">
-            <div className="ld-plat click" onClick={() => nav('/install')} title="How to install">
+            <a className="ld-plat click" href="/install" title="How to install">
               <span className="ic">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
@@ -493,7 +529,7 @@ export default function LandingPage() {
                 </svg>
               </span>
               Web <span className="ld-plat-live">{l.platLive}</span>
-            </div>
+            </a>
             <div className="ld-plat">
               <span className="ic">
                 <svg width="14" height="14" viewBox="0 0 814 1000" fill="currentColor">
@@ -631,19 +667,26 @@ export default function LandingPage() {
       <div className="ld-cta">
         <h2 className="ld-cta-title">{l.ctaT1}<br /><em>{l.ctaT2}</em></h2>
         <p className="ld-cta-sub">{l.ctaS}</p>
-        <button className="ld-cta-btn" onClick={() => nav('/app')}>{l.ctaB}</button>
+        <a className="ld-cta-btn" href="/app">{l.ctaB}</a>
       </div>
 
       {/* ── FOOTER ── */}
       <footer className="ld-footer">
         <div className="ld-logo" style={{ fontSize: 15 }}>tutuu<em>.</em></div>
         <div className="ld-footer-links">
-          <span onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}>{l.ftFeat}</span>
-          <span onClick={() => nav('/pricing')}>{l.ftPrice}</span>
-          <span onClick={() => nav('/app')}>{l.ftSignin}</span>
-          <span onClick={() => nav('/terms')}>Terms</span>
-          <span onClick={() => nav('/privacy')}>Privacy</span>
-          <span onClick={() => nav('/refund')}>Refunds</span>
+          <a href="#features" onClick={scrollToFeatures}>{l.ftFeat}</a>
+          <a href="/pricing">{l.ftPrice}</a>
+          <a href="/app">{l.ftSignin}</a>
+          <a href="/terms">Terms</a>
+          <a href="/privacy">Privacy</a>
+          <a href="/refund">Refunds</a>
+        </div>
+        <div className="ld-footer-langs" aria-label="Languages">
+          {LANGUAGES.map(lg => (
+            <a key={lg.code} href={landingPath(lg.code)} hrefLang={lg.code} lang={lg.code}
+               className={lg.code === lang ? 'on' : undefined}
+               onClick={() => { try { localStorage.setItem('tutuu_lang', lg.code) } catch { /* storage blocked */ } }}>{lg.label}</a>
+          ))}
         </div>
         <div>© 2026 Tutuu</div>
       </footer>

@@ -1,6 +1,5 @@
 import './landing.css'
 
-function nav(to) { window.__navigate?.(to) }
 
 const CONTACT_EMAIL = 'tuskul.bor@gmail.com'
 const COMPANY = 'Tutuu'
@@ -11,8 +10,8 @@ function Shell({ title, children }) {
   return (
     <div className="ldg">
       <header className="ld-nav">
-        <div className="ld-logo" onClick={() => nav('/')} style={{ cursor: 'pointer' }}>tutuu<em>.</em></div>
-        <div className="ld-nav-link" onClick={() => nav('/')}>← Back to home</div>
+        <a className="ld-logo" href="/">tutuu<em>.</em></a>
+        <a className="ld-nav-link" href="/">← Back to home</a>
       </header>
       <div style={{ maxWidth: 760, margin: '0 auto', padding: '64px 24px 96px' }}>
         <h1 style={{ fontSize: 32, fontWeight: 500, marginBottom: 8 }}>{title}</h1>
@@ -61,7 +60,7 @@ export function TermsPage() {
       <Section title="5. Cancellation">
         <p>You may cancel your subscription at any time from your account settings. Cancellation takes effect
         at the end of the current billing period; you retain access until then. See our
-        <span onClick={() => nav('/refund')} style={{ color: 'var(--ld-orange)', cursor: 'pointer' }}> Refund Policy</span> for
+        <a href="/refund" style={{ color: 'var(--ld-orange)', textDecoration: 'none' }}> Refund Policy</a> for
         details on refunds.</p>
       </Section>
       <Section title="6. Account Responsibilities">
@@ -71,7 +70,7 @@ export function TermsPage() {
       </Section>
       <Section title="7. Your Data">
         <p>You retain ownership of all project, task, and team data you submit to the Service. We do not sell
-        your data. See our <span onClick={() => nav('/privacy')} style={{ color: 'var(--ld-orange)', cursor: 'pointer' }}>Privacy Policy</span> for
+        your data. See our <a href="/privacy" style={{ color: 'var(--ld-orange)', textDecoration: 'none' }}>Privacy Policy</a> for
         details on how we collect, use, and protect your information.</p>
       </Section>
       <Section title="8. Acceptable Use">
