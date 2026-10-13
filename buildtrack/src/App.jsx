@@ -6,6 +6,7 @@ import LanguagePicker from './components/LanguagePicker'
 import LoginPage from './pages/LoginPage'
 import AccountPage from './pages/AccountPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
+import ChooseRolePage from './pages/ChooseRolePage'
 import OnboardingScreen from './components/OnboardingScreen'
 import {
   Projects, MyTasks, Tools, Team, Notifications, Procurement, Schedule,
@@ -227,6 +228,7 @@ export default function App() {
   const [authed, setAuthed]           = useState(false)
   const [checking, setChecking]       = useState(true)
   const [recovering, setRecovering]   = useState(false)
+  const [needsRole, setNeedsRole]     = useState(false)
   const [onboarding, setOnboarding]   = useState(() => !localStorage.getItem('tutuu_onboarded'))
 
   useEffect(() => {
@@ -244,6 +246,7 @@ export default function App() {
         setPage(DEFAULT_PAGE[profile.role] || 'dashboard')
       } else {
         setAuthed(false)
+        setNeedsRole(!!useStore.getState().user)
       }
       setChecking(false)
     })
@@ -276,6 +279,8 @@ export default function App() {
   if (recovering) return (
     <ResetPasswordPage onDone={() => { setRecovering(false); setAuthed(false) }} />
   )
+
+  if (!authed && needsRole) return <ChooseRolePage onDone={() => { setNeedsRole(false); handleLogin() }} />
 
   if (!authed) return <LoginPage onLogin={handleLogin} />
 

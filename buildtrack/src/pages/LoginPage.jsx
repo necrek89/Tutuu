@@ -5,6 +5,8 @@ import LanguagePicker from '../components/LanguagePicker'
 import { supabase } from '../lib/supabase'
 import { useAsyncGuard } from '../lib/useAsyncGuard'
 import { AuthCard, Alert } from '../components/UI'
+import { GoogleLogo, AppleLogo } from '@phosphor-icons/react'
+import { signInWithProvider, APPLE_SIGNIN_ENABLED } from '../lib/oauth'
 
 export default function LoginPage({ onLogin }) {
   const { signIn, signUp, loading } = useStore()
@@ -38,6 +40,12 @@ export default function LoginPage({ onLogin }) {
       setSuccess(t('auth.successCreated'))
       switchMode('login')
     }
+  }
+
+  const handleProvider = async (provider) => {
+    setError(''); setSuccess('')
+    const { error } = await signInWithProvider(provider)
+    if (error) setError(t('auth.oauthError'))
   }
 
   // ── Forgot password ─────────────────────────────────────────────────────────
@@ -180,6 +188,24 @@ export default function LoginPage({ onLogin }) {
             >
               {loading ? t('auth.loadingBtn') : mode === 'login' ? t('auth.signinBtn') : t('auth.signupBtn')}
             </button>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '16px 0 12px', color: 'var(--text-muted)', fontSize: 12 }}>
+              <div style={{ flex: 1, height: 1, background: 'var(--border-medium)' }} />
+              {t('auth.orDivider')}
+              <div style={{ flex: 1, height: 1, background: 'var(--border-medium)' }} />
+            </div>
+            <div style={{ display: 'grid', gap: 8 }}>
+              {APPLE_SIGNIN_ENABLED && (
+                <button className="btn" style={{ width: '100%', padding: '10px 16px', fontSize: 14, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                  onClick={() => handleProvider('apple')}>
+                  <AppleLogo size={18} weight="fill" /> {t('auth.continueApple')}
+                </button>
+              )}
+              <button className="btn" style={{ width: '100%', padding: '10px 16px', fontSize: 14, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                onClick={() => handleProvider('google')}>
+                <GoogleLogo size={18} weight="bold" /> {t('auth.continueGoogle')}
+              </button>
+            </div>
 
             <div style={{ textAlign: 'center', marginTop: 16, fontSize: 13, color: 'var(--text-muted)' }}>
               {mode === 'login' ? (

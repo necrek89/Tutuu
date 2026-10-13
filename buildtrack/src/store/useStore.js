@@ -119,7 +119,13 @@ export const useStore = create((set, get) => ({
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return
     const { data: profile } = await supabase
-      .from('profiles').select('*').eq('id', session.user.id).single()
+      .from('profiles').select('*').eq('id', session.user.id).maybeSingle()
+    // First Google/Apple sign-in: the handle_new_user trigger already created a
+    // profile but defaulted its role to 'worker', so the real signal that the
+    // user still has to pick a role is the missing role in their auth metadata
+    // (email sign-up always sets it).
+    const needsRole = session.user.app_metadata?.provider !== 'email' && !session.user.user_metadata?.role
+    if (!profile || !profile.role || needsRole) { set({ user: session.user, profile: null, role: null }); return }
     // Если прораб без invite_code — генерируем
     if (profile?.role === 'foreman' && !profile?.invite_code) {
       const code = Math.random().toString(36).substring(2, 10)

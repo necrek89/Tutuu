@@ -26,6 +26,7 @@ const t = {
     },
     calendar: { clear: 'Clear', today: 'Today', noDate: 'No date' },
     auth: {
+      continueGoogle: "Continue with Google", continueApple: "Continue with Apple", orDivider: "or", oauthError: "Sign-in failed — try again", chooseRoleTitle: "Almost done", chooseRoleDesc: "Tell us how you'll use Tutuu", continueBtn: "Continue",
       signinTitle: 'Sign in to your account',
       guideBtn: '📖 Guide',
       signupTitle: 'Create a new account',
@@ -506,6 +507,7 @@ const t = {
     },
     calendar: { clear: 'Удалить', today: 'Сегодня', noDate: 'Не выбрана' },
     auth: {
+      continueGoogle: "Продолжить с Google", continueApple: "Продолжить с Apple", orDivider: "или", oauthError: "Не удалось войти — попробуйте снова", chooseRoleTitle: "Почти готово", chooseRoleDesc: "Расскажите, как вы будете использовать Tutuu", continueBtn: "Продолжить",
       signinTitle: 'Войти в аккаунт',
       guideBtn: '📖 Гайд',
       signupTitle: 'Создать аккаунт',
@@ -986,6 +988,7 @@ const t = {
     },
     calendar: { clear: 'Obriši', today: 'Danas', noDate: 'Nije odabrano' },
     auth: {
+      continueGoogle: "Nastavi sa Google", continueApple: "Nastavi sa Apple", orDivider: "ili", oauthError: "Prijava nije uspela — pokušajte ponovo", chooseRoleTitle: "Skoro gotovo", chooseRoleDesc: "Recite nam kako ćete koristiti Tutuu", continueBtn: "Nastavi",
       signinTitle: 'Prijavite se na nalog',
       guideBtn: '📖 Vodič',
       signupTitle: 'Kreirajte novi nalog',
@@ -1453,6 +1456,7 @@ const t = {
     },
     calendar: { clear: 'Limpiar', today: 'Hoy', noDate: 'Sin fecha' },
     auth: {
+      continueGoogle: "Continuar con Google", continueApple: "Continuar con Apple", orDivider: "o", oauthError: "No se pudo iniciar sesión — inténtalo de nuevo", chooseRoleTitle: "Casi listo", chooseRoleDesc: "Cuéntanos cómo usarás Tutuu", continueBtn: "Continuar",
       signinTitle: 'Iniciar sesión',
       guideBtn: '📖 Guía',
       signupTitle: 'Crear una nueva cuenta',
@@ -1920,6 +1924,7 @@ const t = {
     },
     calendar: { clear: 'Limpar', today: 'Hoje', noDate: 'Sem data' },
     auth: {
+      continueGoogle: "Continuar com Google", continueApple: "Continuar com Apple", orDivider: "ou", oauthError: "Falha ao entrar — tente novamente", chooseRoleTitle: "Quase pronto", chooseRoleDesc: "Conte como você vai usar o Tutuu", continueBtn: "Continuar",
       signinTitle: 'Entrar na sua conta',
       guideBtn: '📖 Guia',
       signupTitle: 'Criar nova conta',
@@ -2387,6 +2392,7 @@ const t = {
     },
     calendar: { clear: 'Löschen', today: 'Heute', noDate: 'Kein Datum' },
     auth: {
+      continueGoogle: "Weiter mit Google", continueApple: "Weiter mit Apple", orDivider: "oder", oauthError: "Anmeldung fehlgeschlagen — bitte erneut versuchen", chooseRoleTitle: "Fast geschafft", chooseRoleDesc: "Sag uns, wie du Tutuu nutzen wirst", continueBtn: "Weiter",
       signinTitle: 'In Ihr Konto einloggen',
       guideBtn: '📖 Anleitung',
       signupTitle: 'Neues Konto erstellen',
@@ -2854,6 +2860,7 @@ const t = {
     },
     calendar: { clear: 'Effacer', today: 'Aujourd\'hui', noDate: 'Pas de date' },
     auth: {
+      continueGoogle: "Continuer avec Google", continueApple: "Continuer avec Apple", orDivider: "ou", oauthError: "Échec de la connexion — réessayez", chooseRoleTitle: "Presque terminé", chooseRoleDesc: "Dites-nous comment vous utiliserez Tutuu", continueBtn: "Continuer",
       signinTitle: 'Connectez-vous à votre compte',
       guideBtn: '📖 Guide',
       signupTitle: 'Créer un nouveau compte',
@@ -3321,6 +3328,7 @@ const t = {
     },
     calendar: { clear: 'Vymazať', today: 'Dnes', noDate: 'Bez dátumu' },
     auth: {
+      continueGoogle: "Pokračovať cez Google", continueApple: "Pokračovať cez Apple", orDivider: "alebo", oauthError: "Prihlásenie zlyhalo — skúste to znova", chooseRoleTitle: "Takmer hotovo", chooseRoleDesc: "Povedzte nám, ako budete Tutuu používať", continueBtn: "Pokračovať",
       signinTitle: 'Prihláste sa do svojho účtu',
       guideBtn: '📖 Sprievodca',
       signupTitle: 'Vytvoriť nový účet',
@@ -3787,6 +3795,7 @@ const t = {
     },
     calendar: { clear: 'Vymazat', today: 'Dnes', noDate: 'Bez data' },
     auth: {
+      continueGoogle: "Pokračovat přes Google", continueApple: "Pokračovat přes Apple", orDivider: "nebo", oauthError: "Přihlášení selhalo — zkuste to znovu", chooseRoleTitle: "Skoro hotovo", chooseRoleDesc: "Řekněte nám, jak budete Tutuu používat", continueBtn: "Pokračovat",
       signinTitle: 'Přihlaste se ke svému účtu',
       guideBtn: '📖 Průvodce',
       signupTitle: 'Vytvořit nový účet',

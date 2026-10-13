@@ -506,10 +506,28 @@
 .ldg a.ld-plat { color: inherit }
 .ldg .ld-footer-links a { color: inherit; text-decoration: none; cursor: pointer }
 .ldg .ld-footer-links a:hover { color: var(--ld-ink) }
-.ldg .ld-footer-langs { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px }
-.ldg .ld-footer-langs a { color: inherit; text-decoration: none }
-.ldg .ld-footer-langs a:hover,
-.ldg .ld-footer-langs a.on { color: var(--ld-ink) }
+.ldg .ld-langpick { position: relative; font-size: 12px }
+.ldg .ld-langpick summary {
+  list-style: none; cursor: pointer; user-select: none;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 10px; color: var(--ld-muted);
+  border: 0.5px solid var(--ld-border); border-radius: 8px;
+}
+.ldg .ld-langpick summary::-webkit-details-marker { display: none }
+.ldg .ld-langpick summary:hover,
+.ldg .ld-langpick[open] summary { color: var(--ld-ink); border-color: var(--ld-muted) }
+.ldg .ld-langpick-menu {
+  position: absolute; bottom: calc(100% + 8px); left: 0; z-index: 20;
+  min-width: 170px; padding: 6px; display: grid; gap: 1px;
+  background: var(--ld-surface); border: 0.5px solid var(--ld-border);
+  border-radius: 10px; box-shadow: 0 8px 28px rgba(0, 0, 0, 0.25);
+}
+.ldg .ld-langpick-menu a {
+  padding: 7px 10px; border-radius: 6px; font-size: 13px;
+  color: var(--ld-muted); text-decoration: none;
+}
+.ldg .ld-langpick-menu a:hover { background: var(--ld-sand); color: var(--ld-ink) }
+.ldg .ld-langpick-menu a.on { color: var(--ld-orange); font-weight: 500 }
 
 /* ── Footer ── */
 .ldg .ld-footer {
