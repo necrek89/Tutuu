@@ -42,6 +42,9 @@ export function checkDist(dist) {
     }
   }
   const en = read(dist, 'index.html')
+  must(en.includes("location.replace('/app' + s + h)") && en.includes('tutuu_lang'), 'English "/" is missing the early language redirect')
+  for (const l of LANG_CODES.filter((x) => x !== 'en')) must(!read(dist, `${l}/index.html`).includes('location.replace('), `${l}/index.html must not redirect`)
+  must(!read(dist, 'en/index.html').includes('location.replace('), 'en/index.html must not redirect')
   must(/<head[\s\S]*Run your crew/.test(en) || /Run your crew/.test(en), 'English landing text missing')
 
   if (!fs.existsSync(path.join(dist, 'app/index.html'))) bad.push('app/index.html is missing')

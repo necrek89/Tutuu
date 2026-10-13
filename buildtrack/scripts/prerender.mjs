@@ -96,6 +96,25 @@ function socialTags({ title, description, url, locale, alternates = [] }) {
   ]
 }
 
+// Runs first thing in <head> of "/" only, so a visitor is sent to their language
+// (or into the app, when returning from Google sign-in or a password email)
+// before anything is painted. main.jsx does the same as a fallback. Search and
+// preview bots have no saved language and report en-US, so they keep English.
+const earlyRedirect = `<script>
+      (function () {
+        try {
+          if (location.pathname !== '/') return;
+          var h = location.hash, s = location.search;
+          if (/(^|[#&])(access_token|refresh_token|error_description)=|type=(recovery|signup|invite|magiclink)/.test(h) || /[?&]code=/.test(s)) { location.replace('/app' + s + h); return; }
+          var L = ${JSON.stringify(LANG_CODES)}, a = null;
+          try { a = localStorage.getItem('tutuu_lang'); } catch (e) {}
+          var b = (navigator.language || 'en').slice(0, 2).toLowerCase();
+          var l = L.indexOf(a) > -1 ? a : (L.indexOf(b) > -1 ? b : 'en');
+          if (l !== 'en') location.replace('/' + l + s + h);
+        } catch (e) {}
+      })();
+    </script>`
+
 // ── landing, one page per language ────────────────────────────────────────
 const alternates = LANG_CODES.map((l) => `<link rel="alternate" hreflang="${l}" href="${landingUrl(l)}" />`)
 alternates.push(`<link rel="alternate" hreflang="x-default" href="${landingUrl('en')}" />`)
@@ -114,10 +133,14 @@ for (const lang of LANG_CODES) {
     }),
     `<script type="application/ld+json">${jsonLd(lang)}</script>`,
   ].join('\n    ')
-  const html = page({ lang, head, body: renderLanding(lang) })
-  write(lang === 'en' ? '/' : `/${lang}`, html)
-  // "/en" exists too (the language switcher links to it); its canonical is "/".
-  if (lang === 'en') write('/en', html)
+  const body = renderLanding(lang)
+  if (lang === 'en') {
+    write('/', page({ lang, head: earlyRedirect + '\n    ' + head, body }))
+    // "/en" exists too; it never redirects, and its canonical is "/".
+    write('/en', page({ lang, head, body }))
+  } else {
+    write(`/${lang}`, page({ lang, head, body }))
+  }
 }
 
 // ── secondary public pages (English) ──────────────────────────────────────
