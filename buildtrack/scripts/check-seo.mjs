@@ -37,6 +37,7 @@ export function checkDist(dist) {
       for (const l of LANG_CODES) must(head.includes(`hreflang="${l}" href="${landingUrl(l)}"`), `${pg.file}: hreflang ${l} missing`)
       must(head.includes(`hreflang="x-default" href="${landingUrl('en')}"`), `${pg.file}: x-default missing`)
       must(html.includes('href="/app"'), `${pg.file}: no crawlable link to /app`)
+      for (const l of LANG_CODES) must(new RegExp(`<a [^>]*href="${l === 'en' ? '/' : '/' + l}"[^>]*hrefLang="${l}"|<a [^>]*hrefLang="${l}"[^>]*href="${l === 'en' ? '/' : '/' + l}"`).test(html), `${pg.file}: no crawlable link to the ${l} page`)
       must(!/<script src="https:\/\/cdn\.paddle\.com/.test(html), `${pg.file}: Paddle script must not load here`)
     }
   }

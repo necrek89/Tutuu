@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useLang, LANGUAGES } from '../i18n/useLanguage'
 import translations from '../i18n/translations'
-import { landingPath } from '../seo/siteMeta'
+import LangMenu from './LangMenu'
 import { useSiteTheme } from './useSiteTheme'
 import './landing.css'
 
@@ -426,22 +426,6 @@ export default function LandingPage({ lang: langProp }) {
     }
   }, [lang, langProp])
 
-  // Language pages are real URLs (/es, /ru, ...): picking one saves the choice
-  // and goes there.
-  const goToLanguage = (code) => {
-    try { localStorage.setItem('tutuu_lang', code) } catch { /* storage blocked */ }
-    window.location.assign(landingPath(code))
-  }
-  const langPickRef = useRef(null)
-  useEffect(() => {
-    const close = (e) => {
-      const el = langPickRef.current
-      if (el?.open && (e.type === 'keydown' ? e.key === 'Escape' : !el.contains(e.target))) el.open = false
-    }
-    document.addEventListener('click', close)
-    document.addEventListener('keydown', close)
-    return () => { document.removeEventListener('click', close); document.removeEventListener('keydown', close) }
-  }, [])
   const scrollToFeatures = (e) => {
     e.preventDefault()
     document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })
@@ -486,9 +470,7 @@ export default function LandingPage({ lang: langProp }) {
               : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
             }
           </button>
-          <select className="ld-lang" value={lang} onChange={e => goToLanguage(e.target.value)} aria-label="Language">
-            {LANGUAGES.map(lg => <option key={lg.code} value={lg.code}>{lg.label}</option>)}
-          </select>
+          <LangMenu lang={lang} />
           <a className="ld-nav-link" href="/app">{l.navSignin}</a>
           <a className="ld-btn-nav" href="/app">{l.navStart}</a>
         </div>
@@ -691,23 +673,6 @@ export default function LandingPage({ lang: langProp }) {
           <a href="/privacy">Privacy</a>
           <a href="/refund">Refunds</a>
         </div>
-        {/* One compact control instead of nine loose links. The links stay in the
-            HTML (a closed <details> is still readable by crawlers), so every
-            language page is reachable without JavaScript. */}
-        <details className="ld-langpick" ref={langPickRef}>
-          <summary aria-label="Language">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-            {LANGUAGES.find(lg => lg.code === lang)?.label}
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-          </summary>
-          <div className="ld-langpick-menu">
-            {LANGUAGES.map(lg => (
-              <a key={lg.code} href={landingPath(lg.code)} hrefLang={lg.code} lang={lg.code}
-                 className={lg.code === lang ? 'on' : undefined}
-                 onClick={() => { try { localStorage.setItem('tutuu_lang', lg.code) } catch { /* storage blocked */ } }}>{lg.label}</a>
-            ))}
-          </div>
-        </details>
         <div>© 2026 Tutuu</div>
       </footer>
 
