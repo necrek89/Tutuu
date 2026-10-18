@@ -44,9 +44,14 @@ export default function PhotoAssignModal({ tasks, uploadPhoto, attachPhotos, onC
   const refIndex = useMemo(() => buildRefIndex(tasks), [tasks])
   const taskById = useMemo(() => new Map(tasks.map(tk => [String(tk.id), tk])), [tasks])
 
-  useEffect(() => () => {
-    aliveRef.current = false
-    itemsRef.current.forEach(it => it.thumb && URL.revokeObjectURL(it.thumb))
+  // Re-arm on every mount: StrictMode (dev) mounts, unmounts and remounts once,
+  // and a cleanup-only flag would stay false and swallow every later update.
+  useEffect(() => {
+    aliveRef.current = true
+    return () => {
+      aliveRef.current = false
+      itemsRef.current.forEach(it => it.thumb && URL.revokeObjectURL(it.thumb))
+    }
   }, [])
 
   const patch = useCallback((id, changes) => {
