@@ -7,7 +7,8 @@ import TaskModal from '../../components/TaskModal'
 import ConfirmModal from '../../components/ConfirmModal'
 import { SortableStageList } from '../tasks/SortableStage'
 import TaskCard from '../tasks/TaskCard'
-import { FileText, UploadSimple, DownloadSimple, Printer, ChatCircle, Wrench, X } from '@phosphor-icons/react'
+import { FileText, UploadSimple, DownloadSimple, Printer, ChatCircle, Wrench, X, Images } from '@phosphor-icons/react'
+import PhotoAssignModal from './PhotoAssignModal'
 import * as XLSX from 'xlsx'
 import { todayStr } from '../../lib/date'
 import { buildReportHtml } from '../../lib/printReport'
@@ -39,6 +40,7 @@ export default function ProjectTasksTab({ proj, canDelete = true, canEdit = true
   const [addingGroup,  setAddingGroup]  = useState(false)
   const [importPreview, setImportPreview] = useState(null) // [{text,stage,zone,unit,quantity,cost,currency}]
   const importRef = useRef()
+  const [showPhotos, setShowPhotos] = useState(false)
 
   useEffect(() => { fetchTasks(proj.id) }, [proj.id])
 
@@ -573,6 +575,7 @@ export default function ProjectTasksTab({ proj, canDelete = true, canEdit = true
                 {[
                   canEdit && { icon: <FileText size={15} weight="bold" />,    label: t('tasks.menuTemplate'),  action: () => downloadTemplate() },
                   canEdit && { icon: <UploadSimple size={15} weight="bold" />, label: t('tasks.menuImport'),    action: () => importRef.current?.click() },
+                  canEdit && { icon: <Images size={15} weight="bold" />,       label: t('tasks.menuPhotos'),    action: () => setShowPhotos(true) },
                   { icon: <DownloadSimple size={15} weight="bold" />,          label: t('tasks.menuXlsx'),      action: () => exportXLSX() },
                   { icon: <Printer size={15} weight="bold" />,                 label: printing ? '...' : t('tasks.menuPrint'), action: () => !printing && printTasks() },
                   {
@@ -581,13 +584,13 @@ export default function ProjectTasksTab({ proj, canDelete = true, canEdit = true
                     action: () => setPrintWithComments(v => !v),
                     accent: printWithComments,
                   },
-                ].filter(Boolean).map((item, i) => (
+                ].filter(Boolean).map((item, i, arr) => (
                   <button key={i} onClick={() => { item.action(); setShowExportMenu(false) }} style={{
                     display:'flex', alignItems:'center', gap:10,
                     width:'100%', padding:'10px 14px', border:'none', background:'transparent',
                     cursor:'pointer', fontSize:13, textAlign:'left',
                     color: item.accent ? 'var(--accent,#EA580C)' : 'var(--text-primary,#2E2420)',
-                    borderBottom: i < 4 ? '0.5px solid var(--border,#EAE3D8)' : 'none',
+                    borderBottom: i < arr.length - 1 ? '0.5px solid var(--border,#EAE3D8)' : 'none',
                   }}>
                     <span style={{ color: item.accent ? 'var(--accent,#EA580C)' : 'var(--text-secondary)' }}>{item.icon}</span>
                     {item.label}
@@ -726,6 +729,27 @@ export default function ProjectTasksTab({ proj, canDelete = true, canEdit = true
         <ConfirmModal title={t('tasks.deleteTitle')} sub={tasks.find(t => t.id === deleteId)?.text}
           onConfirm={() => { deleteTask(deleteId); setDeleteId(null) }}
           onCancel={() => setDeleteId(null)} />
+      )}
+
+      {showPhotos && (
+        <PhotoAssignModal
+          tasks={pTasks}
+          onClose={() => setShowPhotos(false)}
+          onDone={() => fetchTasks(proj.id)}
+          uploadPhoto={async (file) => {
+            const path = `${profile?.id || 'anon'}/${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`
+            const { error } = await supabase.storage.from('task-photos').upload(path, file, { upsert: true })
+            if (error) return null
+            return supabase.storage.from('task-photos').getPublicUrl(path).data.publicUrl
+          }}
+          attachPhotos={async (taskId, urls) => {
+            // Read the task fresh so photos added elsewhere meanwhile are kept
+            const cur = useStore.getState().tasks.find(tk => String(tk.id) === String(taskId))
+            if (!cur) return { error: new Error('task not found') }
+            const merged = [...(cur.photo_url ? cur.photo_url.split(',').filter(Boolean) : []), ...urls]
+            return updateTask(cur.id, { photo_url: merged.join(',') })
+          }}
+        />
       )}
 
       {/* ── Import preview modal ── */}
