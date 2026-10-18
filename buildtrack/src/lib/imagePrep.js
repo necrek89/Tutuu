@@ -46,7 +46,7 @@ function toJpeg(canvas, quality) {
 }
 
 // → { file: File (JPEG, original base name), thumb: Blob }
-export async function prepareImage(file, { maxPx = 1600, quality = 0.82, thumbPx = 360 } = {}) {
+export async function prepareImage(file, { maxPx = 1200, quality = 0.82, thumbPx = 360 } = {}) {
   const bitmap = await decode(file)
   try {
     const full  = await toJpeg(drawScaled(bitmap, maxPx), quality)
