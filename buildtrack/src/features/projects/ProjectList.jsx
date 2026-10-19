@@ -3,7 +3,6 @@ import { CheckCircle, PencilSimple, ArrowCounterClockwise, Trash, Warning, Clock
 import { Badge, Button, FormGroup, IconButton, EmptyState, Alert } from '../../components/UI'
 import { useT } from '../../i18n/useLanguage'
 import { useStore } from '../../store/useStore'
-import { supabase } from '../../lib/supabase'
 import ConfirmModal from '../../components/ConfirmModal'
 import DatePicker from '../../components/DatePicker'
 import ProjectDetail from './ProjectDetail'
@@ -394,9 +393,10 @@ function ProjectCardList({ onSelect, onEdit, onDelete = null, onComplete = null,
 // ─── PROJECTS (two-mode: list ↔ detail) ─────────────────────────────────────
 export default function Projects({ canDelete = true, canEdit = true }) {
   const { t } = useT()
-  const { projects, tasks, tools, fetchProjects, fetchTasks, fetchTools, updateProject, createProject: createProjectAction, profile, selectedProjectId, setSelectedProject } = useStore()
+  const { projects, tasks, tools, fetchProjects, fetchTasks, fetchTools, updateProject, deleteProject: deleteProjectAction, createProject: createProjectAction, profile, selectedProjectId, setSelectedProject } = useStore()
   const [showAdd,    setShowAdd]    = useState(false)
   const [confirmId,  setConfirmId]  = useState(null)
+  const [deleteError, setDeleteError] = useState('')
   const [editProject, setEditProject] = useState(null)
   const [editForm,   setEditForm]   = useState({ name:'', stage:'Foundation', deadline:'', address:'', progress:0, stages:[], zones:[] })
   const [editSaving, setEditSaving] = useState(false)
@@ -450,13 +450,9 @@ export default function Projects({ canDelete = true, canEdit = true }) {
   }
 
   const deleteProject = async (id) => {
-    await Promise.all([
-      supabase.from('tasks').delete().eq('project_id', id),
-      supabase.from('tools').delete().eq('project_id', id),
-      supabase.from('project_workers').delete().eq('project_id', id),
-    ])
-    await supabase.from('projects').delete().eq('id', id)
-    fetchProjects(); fetchTasks(); fetchTools()
+    setDeleteError('')
+    const { error } = await deleteProjectAction(id)
+    if (error) { setDeleteError(error === 'locked' ? t('errors.locked') : t('errors.deleteFailed')); return }
     setConfirmId(null)
     if (selectedProjectId === id) setSelectedProject(null)
   }
@@ -591,8 +587,9 @@ export default function Projects({ canDelete = true, canEdit = true }) {
       {confirmId && (
         <ConfirmModal title={t('projects.deleteTitle')}
           sub={t('projects.deleteSub', { name: projects.find(p => p.id === confirmId)?.name })}
+          note={deleteError || null}
           onConfirm={() => deleteProject(confirmId)}
-          onCancel={() => setConfirmId(null)} />
+          onCancel={() => { setConfirmId(null); setDeleteError('') }} />
       )}
     </div>
   )

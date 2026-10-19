@@ -15,7 +15,7 @@ const t = {
     },
     roles: { foreman: 'Foreman', manager: 'Manager', worker: 'Worker', client: 'Client' },
     lockout: { foremanMsg: 'Your free trial has ended — subscribe to keep creating and editing.', foremanCta: 'Subscribe', memberMsg: "Your data is safe, but your foreman's subscription needs attention — changes are paused until they resubscribe.", },
-    errors: { limitWorkers: 'Standard plan is limited to 10 workers. Upgrade to Pro for unlimited.', limitProjects: 'Standard plan is limited to 3 active projects. Upgrade to Pro for unlimited.', locked: 'Your trial has ended. Subscribe to continue.', },
+    errors: { deleteFailed: 'The project was not deleted. Check your connection and try again.', limitWorkers: 'Standard plan is limited to 10 workers. Upgrade to Pro for unlimited.', limitProjects: 'Standard plan is limited to 3 active projects. Upgrade to Pro for unlimited.', locked: 'Your trial has ended. Subscribe to continue.', },
     schedule: { today: 'Today', noWorkers: 'No one in the crew yet', },
     common: {
       cancel: 'Cancel', save: 'Save', delete: 'Delete', edit: 'Edit',
@@ -520,7 +520,7 @@ const t = {
     },
     roles: { foreman: 'Прораб', manager: 'Менеджер', worker: 'Рабочий', client: 'Клиент' },
     lockout: { foremanMsg: 'Пробный период закончился — оформите подписку, чтобы продолжить создавать и редактировать.', foremanCta: 'Оформить подписку', memberMsg: 'Данные в безопасности, но подписка вашего прораба требует внимания — изменения приостановлены до её оформления.', },
-    errors: { limitWorkers: 'На тарифе Standard — максимум 10 рабочих. Перейдите на Pro для снятия лимита.', limitProjects: 'На тарифе Standard — максимум 3 активных проекта. Перейдите на Pro для снятия лимита.', locked: 'Пробный период закончился. Оформите подписку, чтобы продолжить.', },
+    errors: { deleteFailed: 'Проект не удалён. Проверьте соединение и попробуйте снова.', limitWorkers: 'На тарифе Standard — максимум 10 рабочих. Перейдите на Pro для снятия лимита.', limitProjects: 'На тарифе Standard — максимум 3 активных проекта. Перейдите на Pro для снятия лимита.', locked: 'Пробный период закончился. Оформите подписку, чтобы продолжить.', },
     schedule: { today: 'Сегодня', noWorkers: 'В команде пока никого нет', },
     common: {
       cancel: 'Отмена', save: 'Сохранить', delete: 'Удалить', edit: 'Изменить',
@@ -1025,7 +1025,7 @@ const t = {
     },
     roles: { foreman: 'Poslovođa', manager: 'Menadžer', worker: 'Radnik', client: 'Klijent' },
     lockout: { foremanMsg: 'Probni period je istekao — pretplatite se da biste nastavili da kreirate i menjate.', foremanCta: 'Pretplati se', memberMsg: 'Vaši podaci su bezbedni, ali pretplata vašeg poslovođe zahteva pažnju — izmene su pauzirane dok se ne obnovi.', },
-    errors: { limitWorkers: 'Standard plan je ograničen na 10 radnika. Pređite na Pro za neograničeno.', limitProjects: 'Standard plan je ograničen na 3 aktivna projekta. Pređite na Pro za neograničeno.', locked: 'Probni period je istekao. Pretplatite se da biste nastavili.', },
+    errors: { deleteFailed: 'Projekat nije obrisan. Proverite vezu i pokušajte ponovo.', limitWorkers: 'Standard plan je ograničen na 10 radnika. Pređite na Pro za neograničeno.', limitProjects: 'Standard plan je ograničen na 3 aktivna projekta. Pređite na Pro za neograničeno.', locked: 'Probni period je istekao. Pretplatite se da biste nastavili.', },
     schedule: { today: 'Danas', noWorkers: 'U ekipi još nema nikoga', },
     common: {
       cancel: 'Otkaži', save: 'Sačuvaj', delete: 'Obriši', edit: 'Uredi',
@@ -1493,7 +1493,7 @@ const t = {
     },
     roles: { foreman: 'Capataz', manager: 'Gerente', worker: 'Obrero', client: 'Cliente' },
     lockout: { foremanMsg: 'Tu prueba gratuita ha terminado — suscríbete para seguir creando y editando.', foremanCta: 'Suscribirse', memberMsg: 'Tus datos están seguros, pero la suscripción de tu capataz necesita atención — los cambios están pausados hasta que se renueve.', },
-    errors: { limitWorkers: 'El plan Standard está limitado a 10 trabajadores. Mejora a Pro para no tener límite.', limitProjects: 'El plan Standard está limitado a 3 proyectos activos. Mejora a Pro para no tener límite.', locked: 'Tu prueba ha terminado. Suscríbete para continuar.', },
+    errors: { deleteFailed: 'El proyecto no se eliminó. Comprueba la conexión e inténtalo de nuevo.', limitWorkers: 'El plan Standard está limitado a 10 trabajadores. Mejora a Pro para no tener límite.', limitProjects: 'El plan Standard está limitado a 3 proyectos activos. Mejora a Pro para no tener límite.', locked: 'Tu prueba ha terminado. Suscríbete para continuar.', },
     schedule: { today: 'Hoy', noWorkers: 'Todavía no hay nadie en el equipo', },
     common: {
       cancel: 'Cancelar', save: 'Guardar', delete: 'Eliminar', edit: 'Editar',
@@ -1961,7 +1961,7 @@ const t = {
     },
     roles: { foreman: 'Mestre de obras', manager: 'Gerente', worker: 'Trabalhador', client: 'Cliente' },
     lockout: { foremanMsg: 'Seu teste grátis terminou — assine para continuar criando e editando.', foremanCta: 'Assinar', memberMsg: 'Seus dados estão seguros, mas a assinatura do seu mestre de obras precisa de atenção — as alterações estão pausadas até a renovação.', },
-    errors: { limitWorkers: 'O plano Standard é limitado a 10 trabalhadores. Faça upgrade para Pro para não ter limite.', limitProjects: 'O plano Standard é limitado a 3 projetos ativos. Faça upgrade para Pro para não ter limite.', locked: 'Seu teste terminou. Assine para continuar.', },
+    errors: { deleteFailed: 'O projeto não foi excluído. Verifique a conexão e tente novamente.', limitWorkers: 'O plano Standard é limitado a 10 trabalhadores. Faça upgrade para Pro para não ter limite.', limitProjects: 'O plano Standard é limitado a 3 projetos ativos. Faça upgrade para Pro para não ter limite.', locked: 'Seu teste terminou. Assine para continuar.', },
     schedule: { today: 'Hoje', noWorkers: 'Ainda não há ninguém na equipe', },
     common: {
       cancel: 'Cancelar', save: 'Salvar', delete: 'Excluir', edit: 'Editar',
@@ -2429,7 +2429,7 @@ const t = {
     },
     roles: { foreman: 'Vorarbeiter', manager: 'Manager', worker: 'Arbeiter', client: 'Auftraggeber' },
     lockout: { foremanMsg: 'Deine Testphase ist abgelaufen — abonniere, um weiter erstellen und bearbeiten zu können.', foremanCta: 'Abonnieren', memberMsg: 'Deine Daten sind sicher, aber das Abo deines Vorarbeiters braucht Aufmerksamkeit — Änderungen sind pausiert, bis er wieder abonniert.', },
-    errors: { limitWorkers: 'Der Standard-Plan ist auf 10 Arbeiter begrenzt. Upgrade auf Pro für unbegrenzt.', limitProjects: 'Der Standard-Plan ist auf 3 aktive Projekte begrenzt. Upgrade auf Pro für unbegrenzt.', locked: 'Deine Testphase ist abgelaufen. Abonniere, um fortzufahren.', },
+    errors: { deleteFailed: 'Das Projekt wurde nicht gelöscht. Prüfe die Verbindung und versuche es erneut.', limitWorkers: 'Der Standard-Plan ist auf 10 Arbeiter begrenzt. Upgrade auf Pro für unbegrenzt.', limitProjects: 'Der Standard-Plan ist auf 3 aktive Projekte begrenzt. Upgrade auf Pro für unbegrenzt.', locked: 'Deine Testphase ist abgelaufen. Abonniere, um fortzufahren.', },
     schedule: { today: 'Heute', noWorkers: 'Noch niemand im Team', },
     common: {
       cancel: 'Abbrechen', save: 'Speichern', delete: 'Löschen', edit: 'Bearbeiten',
@@ -2897,7 +2897,7 @@ const t = {
     },
     roles: { foreman: 'Contremaître', manager: 'Manager', worker: 'Ouvrier', client: 'Client' },
     lockout: { foremanMsg: 'Votre essai gratuit est terminé — abonnez-vous pour continuer à créer et modifier.', foremanCta: "S'abonner", memberMsg: "Vos données sont en sécurité, mais l'abonnement de votre chef de chantier nécessite votre attention — les modifications sont suspendues jusqu'au renouvellement.", },
-    errors: { limitWorkers: 'Le forfait Standard est limité à 10 ouvriers. Passez à Pro pour un accès illimité.', limitProjects: 'Le forfait Standard est limité à 3 projets actifs. Passez à Pro pour un accès illimité.', locked: 'Votre essai est terminé. Abonnez-vous pour continuer.', },
+    errors: { deleteFailed: "Le projet n'a pas été supprimé. Vérifiez la connexion et réessayez.", limitWorkers: 'Le forfait Standard est limité à 10 ouvriers. Passez à Pro pour un accès illimité.', limitProjects: 'Le forfait Standard est limité à 3 projets actifs. Passez à Pro pour un accès illimité.', locked: 'Votre essai est terminé. Abonnez-vous pour continuer.', },
     schedule: { today: "Aujourd'hui", noWorkers: "Personne dans l'équipe pour l'instant", },
     common: {
       cancel: 'Annuler', save: 'Enregistrer', delete: 'Supprimer', edit: 'Modifier',
@@ -3365,7 +3365,7 @@ const t = {
     },
     roles: { foreman: 'Majster', manager: 'Manažér', worker: 'Pracovník', client: 'Klient' },
     lockout: { foremanMsg: 'Vaše skúšobné obdobie skončilo — predplaťte si, aby ste mohli pokračovať vo vytváraní a úpravách.', foremanCta: 'Predplatiť', memberMsg: 'Vaše dáta sú v bezpečí, ale predplatné vášho majstra vyžaduje pozornosť — zmeny sú pozastavené, kým si ho neobnoví.', },
-    errors: { limitWorkers: 'Plán Standard je obmedzený na 10 pracovníkov. Prejdite na Pro pre neobmedzený počet.', limitProjects: 'Plán Standard je obmedzený na 3 aktívne projekty. Prejdite na Pro pre neobmedzený počet.', locked: 'Vaša skúšobná verzia skončila. Predplaťte si pre pokračovanie.', },
+    errors: { deleteFailed: 'Projekt nebol odstránený. Skontrolujte pripojenie a skúste to znova.', limitWorkers: 'Plán Standard je obmedzený na 10 pracovníkov. Prejdite na Pro pre neobmedzený počet.', limitProjects: 'Plán Standard je obmedzený na 3 aktívne projekty. Prejdite na Pro pre neobmedzený počet.', locked: 'Vaša skúšobná verzia skončila. Predplaťte si pre pokračovanie.', },
     schedule: { today: 'Dnes', noWorkers: 'V tíme zatiaľ nikto nie je', },
     common: {
       cancel: 'Zrušiť', save: 'Uložiť', delete: 'Odstrániť', edit: 'Upraviť',
@@ -3832,7 +3832,7 @@ const t = {
     },
     roles: { foreman: 'Vedoucí', manager: 'Manažer', worker: 'Pracovník', client: 'Klient' },
     lockout: { foremanMsg: 'Vaše zkušební období skončilo — předplaťte si, abyste mohli pokračovat ve vytváření a úpravách.', foremanCta: 'Předplatit', memberMsg: 'Vaše data jsou v bezpečí, ale předplatné vašeho mistra vyžaduje pozornost — změny jsou pozastaveny, dokud si ho neobnoví.', },
-    errors: { limitWorkers: 'Plán Standard je omezen na 10 pracovníků. Přejděte na Pro pro neomezený počet.', limitProjects: 'Plán Standard je omezen na 3 aktivní projekty. Přejděte na Pro pro neomezený počet.', locked: 'Vaše zkušební verze skončila. Předplaťte si pro pokračování.', },
+    errors: { deleteFailed: 'Projekt nebyl smazán. Zkontrolujte připojení a zkuste to znovu.', limitWorkers: 'Plán Standard je omezen na 10 pracovníků. Přejděte na Pro pro neomezený počet.', limitProjects: 'Plán Standard je omezen na 3 aktivní projekty. Přejděte na Pro pro neomezený počet.', locked: 'Vaše zkušební verze skončila. Předplaťte si pro pokračování.', },
     schedule: { today: 'Dnes', noWorkers: 'V týmu zatím nikdo není', },
     common: {
       cancel: 'Zrušit', save: 'Uložit', delete: 'Smazat', edit: 'Upravit',

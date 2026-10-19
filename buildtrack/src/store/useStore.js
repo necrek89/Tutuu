@@ -153,20 +153,16 @@ export const useStore = create((set, get) => ({
     let query = supabase.from('projects').select('*')
     if (role === 'foreman') {
       query = query.eq('foreman_id', profile.id)
-    } else if (role === 'manager') {
-      const { data: pw } = await supabase
+    } else if (role === 'manager' || role === 'client') {
+      const { data: pw, error: pwErr } = await supabase
         .from('project_workers').select('project_id').eq('worker_id', profile.id)
-      const ids = (pw || []).map(r => r.project_id)
-      if (!ids.length) { set({ projects: [] }); return }
-      query = query.in('id', ids)
-    } else if (role === 'client') {
-      const { data: pw } = await supabase
-        .from('project_workers').select('project_id').eq('worker_id', profile.id)
+      if (pwErr) return // keep what is on screen; a failed request is not "no projects"
       const ids = (pw || []).map(r => r.project_id)
       if (!ids.length) { set({ projects: [] }); return }
       query = query.in('id', ids)
     }
-    const { data } = await query
+    const { data, error } = await query
+    if (error) return
     set({ projects: data || [] })
   },
 
@@ -190,6 +186,28 @@ export const useStore = create((set, get) => ({
     return { error }
   },
 
+  // Deletes a project. Tools are the crew's equipment, not project property, so
+  // they go back to stock (unassigned) instead of being deleted with the project.
+  // Everything else tied to the project (tasks, documents, expenses, material
+  // requests, crew links) is removed by the database together with the project row.
+  // Sequenced so a failure at any step leaves the project and its data intact.
+  deleteProject: async (id) => {
+    const { error: toolsErr } = await supabase.from('tools')
+      .update({ project_id: null, worker_id: null, assigned_at: null, assigned_by_name: null })
+      .eq('project_id', id)
+    if (toolsErr) return { error: toolsErr }
+    const { data, error } = await supabase.from('projects').delete().eq('id', id).select('id')
+    if (error) return { error }
+    if (!data?.length) return { error: new Error('not deleted') } // no row removed (no permission, or already gone)
+    set(s => ({
+      projects: s.projects.filter(p => p.id !== id),
+      tasks: s.tasks.filter(t => t.project_id !== id),
+      tools: s.tools.map(t => t.project_id === id
+        ? { ...t, project_id: null, worker_id: null, assigned_at: null, assigned_by_name: null } : t),
+    }))
+    return { error: null }
+  },
+
   // ── TASKS ─────────────────────────────────────────────────
   fetchTasks: async (projectId) => {
     const { role, projects } = get()
@@ -210,7 +228,8 @@ export const useStore = create((set, get) => ({
       if (!ids.length) { set({ tasks: [] }); return }
       query = query.in('project_id', ids)
     }
-    const { data } = await query.order('created_at', { ascending: false })
+    const { data, error } = await query.order('created_at', { ascending: false })
+    if (error) return
     if (projectId) {
       // Merge: replace only tasks for this project, keep others intact
       const others = get().tasks.filter(t => t.project_id !== projectId)
@@ -286,12 +305,14 @@ export const useStore = create((set, get) => ({
       query = query.in('project_id', ids)
     } else if (role === 'worker') {
       // Worker sees only tools from projects they belong to
-      const { data: pw } = await supabase.from('project_workers').select('project_id').eq('worker_id', profile.id)
+      const { data: pw, error: pwErr } = await supabase.from('project_workers').select('project_id').eq('worker_id', profile.id)
+      if (pwErr) return
       const ids = (pw || []).map(r => r.project_id)
       if (!ids.length) { set({ tools: [] }); return }
       query = query.in('project_id', ids)
     }
-    const { data } = await query
+    const { data, error } = await query
+    if (error) return
     set({ tools: data || [] })
   },
 
@@ -328,10 +349,11 @@ export const useStore = create((set, get) => ({
 
   fetchWorkers: async (projectId) => {
     const reqId = ++teamFetchSeq
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('project_workers')
       .select('worker:profiles(id, name, role, worker_status, phone, telegram, default_rate, rate_type)')
       .eq('project_id', projectId)
+    if (error) return get().team
     const workers = data?.map(d => d.worker) || []
     if (reqId === teamFetchSeq) set({ team: workers })
     return workers
@@ -346,10 +368,11 @@ export const useStore = create((set, get) => ({
 
     // Source 1: via project_workers
     if (projects.length) {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('project_workers')
         .select('worker:profiles(id, name, role, worker_status, phone, telegram, default_rate, rate_type), project_id')
         .in('project_id', projects.map(p => p.id))
+      if (error) return null
       for (const row of data || []) {
         const w = row.worker
         if (!w) continue
@@ -361,18 +384,20 @@ export const useStore = create((set, get) => ({
     // Source 2: via approved join_requests (catches workers added before any project existed)
     if (profile?.role === 'foreman') {
       // Step 1: get worker_ids from approved requests
-      const { data: reqData } = await supabase
+      const { data: reqData, error: reqErr } = await supabase
         .from('join_requests')
         .select('worker_id')
         .eq('foreman_id', profile.id)
         .eq('status', 'approved')
+      if (reqErr) return null
       const workerIds = (reqData || []).map(r => r.worker_id).filter(id => id && !map[id])
       // Step 2: fetch profiles for those workers
       if (workerIds.length) {
-        const { data: profData } = await supabase
+        const { data: profData, error: profErr } = await supabase
           .from('profiles')
           .select('id, name, role, worker_status, phone, telegram, default_rate, rate_type')
           .in('id', workerIds)
+        if (profErr) return null
         for (const w of profData || []) {
           if (!map[w.id]) map[w.id] = { ...w, project_ids: [] }
         }
@@ -385,6 +410,7 @@ export const useStore = create((set, get) => ({
   // Fetch all unique workers across all foreman's projects, with project membership
   fetchAllWorkers: async () => {
     const workers = await get()._buildRoster()
+    if (!workers) return get().team // request failed: keep the list that is already shown
     set({ team: workers })
     return workers
   },
@@ -394,6 +420,7 @@ export const useStore = create((set, get) => ({
   // members while still having the full crew available to pick from when adding.
   fetchRoster: async () => {
     const workers = await get()._buildRoster()
+    if (!workers) return get().roster
     set({ roster: workers })
     return workers
   },
@@ -412,7 +439,7 @@ export const useStore = create((set, get) => ({
   addWorkerToTeam: async (email) => {
     const { profile } = get()
     if (profile?.plan === 'standard') {
-      const roster = await get()._buildRoster()
+      const roster = (await get()._buildRoster()) || []
       if (roster.length >= PLANS.standard.maxWorkers) return { error: 'limit_workers' }
     }
     const { data: worker, error } = await supabase
@@ -481,7 +508,7 @@ export const useStore = create((set, get) => ({
   // Прораб получает список заявок
   fetchJoinRequests: async () => {
     const { profile } = get()
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('join_requests')
       .select(`
         id, status, created_at,
@@ -490,6 +517,7 @@ export const useStore = create((set, get) => ({
       .eq('foreman_id', profile.id)
       .eq('status', 'pending')
       .order('created_at', { ascending: false })
+    if (error) return
     set({ joinRequests: data || [] })
   },
 
@@ -499,7 +527,7 @@ export const useStore = create((set, get) => ({
   approveJoinRequest: async (requestId, workerId) => {
     const { joinRequests, profile } = get()
     if (profile?.plan === 'standard') {
-      const roster = await get()._buildRoster()
+      const roster = (await get()._buildRoster()) || []
       if (roster.length >= PLANS.standard.maxWorkers) return { error: 'limit_workers' }
     }
     const req = joinRequests.find(r => r.id === requestId)
@@ -550,7 +578,8 @@ export const useStore = create((set, get) => ({
       if (!ids.length) { set({ materialRequests: [] }); return }
       query = query.in('project_id', ids)
     }
-    const { data } = await query
+    const { data, error } = await query
+    if (error) return
     set({ materialRequests: data || [] })
   },
 
@@ -690,10 +719,11 @@ export const useStore = create((set, get) => ({
 
   // ── NOTIFICATIONS ─────────────────────────────────────────
   fetchNotifications: async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('notifications')
       .select('*')
       .order('created_at', { ascending: false })
+    if (error) return
     set({ notifications: data || [] })
   },
 
@@ -729,7 +759,8 @@ export const useStore = create((set, get) => ({
       query = query.in('project_id', ids)
     } else if (role === 'worker') {
       // Worker sees only activity from their assigned projects
-      const { data: pw } = await supabase.from('project_workers').select('project_id').eq('worker_id', profile.id)
+      const { data: pw, error: pwErr } = await supabase.from('project_workers').select('project_id').eq('worker_id', profile.id)
+      if (pwErr) return
       const ids = (pw || []).map(r => r.project_id)
       if (!ids.length) { set({ activityLog: [] }); return }
       query = query.in('project_id', ids)
@@ -739,7 +770,8 @@ export const useStore = create((set, get) => ({
       if (!ids.length) { set({ activityLog: [] }); return }
       query = query.in('project_id', ids)
     }
-    const { data } = await query
+    const { data, error } = await query
+    if (error) return
     set({ activityLog: data || [] })
   },
 
@@ -774,11 +806,12 @@ export const useStore = create((set, get) => ({
   },
   // ── EXPENSES ─────────────────────────────────────────────────────────────────
   fetchExpenses: async (projectId) => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('expenses')
       .select('*')
       .eq('project_id', projectId)
       .order('date', { ascending: false })
+    if (error) return
     set({ expenses: data || [] })
   },
 
@@ -827,11 +860,12 @@ export const useStore = create((set, get) => ({
 
   // ── DOCUMENTS ────────────────────────────────────────────────────────────────
   fetchDocuments: async (projectId) => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('documents')
       .select('*')
       .eq('project_id', projectId)
       .order('created_at', { ascending: false })
+    if (error) return
     set({ documents: data || [] })
   },
 
@@ -915,11 +949,12 @@ export const useStore = create((set, get) => ({
   payments: {},  // keyed by workerId
 
   fetchPayments: async (workerId) => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('worker_payments')
       .select('*')
       .eq('worker_id', workerId)
       .order('paid_at', { ascending: false })
+    if (error) return get().payments[workerId] || []
     set(s => ({ payments: { ...s.payments, [workerId]: data || [] } }))
     return data || []
   },
@@ -952,7 +987,8 @@ export const useStore = create((set, get) => ({
 
   fetchAttendance: async (date) => {
     const dateStr = date || todayStr()
-    const { data } = await supabase.from('attendance').select('*').eq('date', dateStr)
+    const { data, error } = await supabase.from('attendance').select('*').eq('date', dateStr)
+    if (error) return
     set({ attendance: data || [] })
   },
 
@@ -998,7 +1034,7 @@ export const useStore = create((set, get) => ({
 // through every component that calls these. Read-only actions (fetch*) are
 // deliberately not in this list — the soft lockout keeps all data visible.
 const MUTATING_ACTIONS = [
-  'createProject', 'updateProject',
+  'createProject', 'updateProject', 'deleteProject',
   'addTask', 'updateTask', 'deleteTask', 'submitTask', 'approveTask', 'rejectTask',
   'addTool', 'updateTool', 'deleteTool',
   'removeWorkerFromProject', 'addWorkerToTeam', 'addWorkerToProject',

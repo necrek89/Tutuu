@@ -106,33 +106,37 @@ export default function LoginPage({ onLogin }) {
 
             {!success && (
               <>
-                <div className="form-group">
-                  <label className="form-label">{t('auth.emailLabel')}</label>
-                  <input
-                    className="form-input" type="email" placeholder="you@example.com"
-                    value={resetEmail} onChange={e => setResetEmail(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && handleReset()}
-                    autoFocus
-                  />
-                </div>
-                <button
-                  className="btn btn-primary"
-                  style={{ width: '100%', padding: '11px 16px', fontSize: 14, borderRadius: 10 }}
-                  onClick={handleReset}
-                  disabled={sending}
-                >
-                  {sending ? t('auth.resetSending') : t('auth.resetEmailBtn')}
-                </button>
+                <form onSubmit={e => { e.preventDefault(); handleReset() }}>
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="auth-reset-email">{t('auth.emailLabel')}</label>
+                    <input
+                      id="auth-reset-email" name="email"
+                      className="form-input" type="email" placeholder="you@example.com"
+                      autoComplete="email" inputMode="email" autoCapitalize="none" spellCheck={false}
+                      value={resetEmail} onChange={e => setResetEmail(e.target.value)}
+                      autoFocus
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    style={{ width: '100%', padding: '11px 16px', fontSize: 14, borderRadius: 10 }}
+                    disabled={sending}
+                  >
+                    {sending ? t('auth.resetSending') : t('auth.resetEmailBtn')}
+                  </button>
+                </form>
               </>
             )}
 
             <div style={{ textAlign: 'center', marginTop: 16 }}>
-              <span
-                style={{ fontSize: 13, color: 'var(--accent)', cursor: 'pointer', fontWeight: 500 }}
+              <button
+                type="button"
+                style={{ ...{ background: 'none', border: 'none', padding: 0, font: 'inherit', cursor: 'pointer', color: 'var(--accent)', fontWeight: 500 }, fontSize: 13 }}
                 onClick={() => switchMode('login')}
               >
                 {t('auth.backToLogin')}
-              </span>
+              </button>
             </div>
           </>
         )}
@@ -140,15 +144,17 @@ export default function LoginPage({ onLogin }) {
         {/* ── LOGIN / REGISTER mode ── */}
         {mode !== 'forgot' && (
           <>
+            <form onSubmit={e => { e.preventDefault(); handleSubmit() }}>
             {mode === 'register' && (
               <>
                 <div className="form-group">
-                  <label className="form-label">{t('auth.nameLabel')}</label>
-                  <input className="form-input" placeholder={t('auth.namePlaceholder')} value={form.name} onChange={set('name')} />
+                  <label className="form-label" htmlFor="auth-name">{t('auth.nameLabel')}</label>
+                  <input id="auth-name" name="name" autoComplete="name"
+                    className="form-input" placeholder={t('auth.namePlaceholder')} value={form.name} onChange={set('name')} />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">{t('auth.roleLabel')}</label>
-                  <select className="form-input" value={form.role} onChange={set('role')}>
+                  <label className="form-label" htmlFor="auth-role">{t('auth.roleLabel')}</label>
+                  <select id="auth-role" className="form-input" value={form.role} onChange={set('role')}>
                     <option value="foreman">{t('roles.foreman')}</option>
                     <option value="worker">{t('roles.worker')}</option>
                   </select>
@@ -157,37 +163,39 @@ export default function LoginPage({ onLogin }) {
             )}
 
             <div className="form-group">
-              <label className="form-label">{t('auth.emailLabel')}</label>
-              <input className="form-input" type="email" placeholder="you@example.com"
-                value={form.email} onChange={set('email')}
-                onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
+              <label className="form-label" htmlFor="auth-email">{t('auth.emailLabel')}</label>
+              <input id="auth-email" name="email" className="form-input" type="email" placeholder="you@example.com"
+                autoComplete="email" inputMode="email" autoCapitalize="none" spellCheck={false}
+                value={form.email} onChange={set('email')} />
             </div>
 
             <div className="form-group">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-                <label className="form-label" style={{ margin: 0 }}>{t('auth.passwordLabel')}</label>
+                <label className="form-label" htmlFor="auth-password" style={{ margin: 0 }}>{t('auth.passwordLabel')}</label>
                 {mode === 'login' && (
-                  <span
-                    style={{ fontSize: 12, color: 'var(--accent)', cursor: 'pointer', fontWeight: 500 }}
+                  <button
+                    type="button"
+                    style={{ ...{ background: 'none', border: 'none', padding: 0, font: 'inherit', cursor: 'pointer', color: 'var(--accent)', fontWeight: 500 }, fontSize: 12 }}
                     onClick={() => { switchMode('forgot'); setResetEmail(form.email) }}
                   >
                     {t('auth.forgotPassword')}
-                  </span>
+                  </button>
                 )}
               </div>
-              <input className="form-input" type="password" placeholder="••••••••"
-                value={form.password} onChange={set('password')}
-                onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
+              <input id="auth-password" name="password" className="form-input" type="password" placeholder="••••••••"
+                autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                value={form.password} onChange={set('password')} />
             </div>
 
             <button
+              type="submit"
               className="btn btn-primary"
               style={{ width: '100%', marginTop: 8, padding: '11px 16px', fontSize: 14, borderRadius: 10 }}
-              onClick={handleSubmit}
               disabled={loading}
             >
               {loading ? t('auth.loadingBtn') : mode === 'login' ? t('auth.signinBtn') : t('auth.signupBtn')}
             </button>
+            </form>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '16px 0 12px', color: 'var(--text-muted)', fontSize: 12 }}>
               <div style={{ flex: 1, height: 1, background: 'var(--border-medium)' }} />
@@ -196,12 +204,12 @@ export default function LoginPage({ onLogin }) {
             </div>
             <div style={{ display: 'grid', gap: 8 }}>
               {APPLE_SIGNIN_ENABLED && (
-                <button className="btn" style={{ width: '100%', padding: '10px 16px', fontSize: 14, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                <button type="button" className="btn" style={{ width: '100%', padding: '10px 16px', fontSize: 14, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
                   onClick={() => handleProvider('apple')}>
                   <AppleLogo size={18} weight="fill" /> {t('auth.continueApple')}
                 </button>
               )}
-              <button className="btn" style={{ width: '100%', padding: '10px 16px', fontSize: 14, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+              <button type="button" className="btn" style={{ width: '100%', padding: '10px 16px', fontSize: 14, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
                 onClick={() => handleProvider('google')}>
                 <GoogleLogo size={18} weight="bold" /> {t('auth.continueGoogle')}
               </button>
@@ -211,18 +219,18 @@ export default function LoginPage({ onLogin }) {
               {mode === 'login' ? (
                 <>
                   {t('auth.noAccount')}{' '}
-                  <span style={{ color: 'var(--accent)', cursor: 'pointer', fontWeight: 500 }}
+                  <button type="button" style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', cursor: 'pointer', color: 'var(--accent)', fontWeight: 500 }}
                     onClick={() => switchMode('register')}>
                     {t('auth.signupLink')}
-                  </span>
+                  </button>
                 </>
               ) : (
                 <>
                   {t('auth.haveAccount')}{' '}
-                  <span style={{ color: 'var(--accent)', cursor: 'pointer', fontWeight: 500 }}
+                  <button type="button" style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', cursor: 'pointer', color: 'var(--accent)', fontWeight: 500 }}
                     onClick={() => switchMode('login')}>
                     {t('auth.signinLink')}
-                  </span>
+                  </button>
                 </>
               )}
             </div>

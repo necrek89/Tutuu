@@ -4,7 +4,7 @@ import { useT } from '../../i18n/useLanguage'
 import { useStore } from '../../store/useStore'
 import MaterialModal from '../../components/MaterialModal'
 import { FileXls, FilePdf, Check, Trash, X, CheckCircle, CalendarBlank, ClipboardText, Buildings, HardHat } from '@phosphor-icons/react'
-import * as XLSX from 'xlsx'
+import { loadXlsx } from '../../lib/xlsx'
 import { todayStr, toLocalDateStr } from '../../lib/date'
 import { openPrintWindow } from '../../lib/printReport'
 
@@ -162,7 +162,7 @@ export default function Procurement({ canDelete = true, canEdit = true }) {
   }
 
   // ── XLSX export ───────────────────────────────────────────────────────────
-  const exportPurchased = () => {
+  const exportPurchased = async () => {
     const purchased = allItems.filter(i => i.isPurchased)
     if (!purchased.length) { alert(t('procurement.noPurchasesToExport')); return }
 
@@ -177,6 +177,7 @@ export default function Procurement({ canDelete = true, canEdit = true }) {
       ? new Date(iso).toLocaleDateString(lang, { day: 'numeric', month: 'short', year: 'numeric' })
       : '—'
 
+    const XLSX = await loadXlsx()
     const wb = XLSX.utils.book_new()
 
     // ── Sheet 1: all purchases ──────────────────────────────────────────────

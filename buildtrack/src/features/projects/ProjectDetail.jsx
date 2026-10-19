@@ -1,15 +1,17 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { PencilSimple } from '@phosphor-icons/react'
 import { IconButton } from '../../components/UI'
 import { useT } from '../../i18n/useLanguage'
 import { useStore } from '../../store/useStore'
-import InvoiceModal from '../../components/InvoiceModal'
 import ExpensesTab from '../../components/ExpensesTab'
 import ProjectTasksTab from './ProjectTasksTab'
 import MaterialsTab from './MaterialsTab'
 import PhotosTab from './PhotosTab'
 import DocumentsTab from './DocumentsTab'
 import ProjectTeamTab from './ProjectTeamTab'
+
+// The invoice builder is big and rarely opened: load it only when asked for.
+const InvoiceModal = lazy(() => import('../../components/InvoiceModal'))
 
 // ─── PROJECT DETAIL ──────────────────────────────────────────────────────────
 export default function ProjectDetail({ proj, onBack, onEdit, canDelete = true, canEdit = true }) {
@@ -65,11 +67,13 @@ export default function ProjectDetail({ proj, onBack, onEdit, canDelete = true, 
       </div>
 
       {showInvoice && (
-        <InvoiceModal
-          proj={proj}
-          tasks={tasks}
-          onClose={() => setShowInvoice(false)}
-        />
+        <Suspense fallback={null}>
+          <InvoiceModal
+            proj={proj}
+            tasks={tasks}
+            onClose={() => setShowInvoice(false)}
+          />
+        </Suspense>
       )}
 
       {/* ── Progress strip ── */}

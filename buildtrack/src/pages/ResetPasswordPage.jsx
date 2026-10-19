@@ -67,28 +67,31 @@ export default function ResetPasswordPage({ onDone }) {
             {/* Error */}
             <Alert ok={false}>{error}</Alert>
 
+            <form onSubmit={e => { e.preventDefault(); submit() }}>
             {/* New password */}
             <div className="form-group">
-              <label className="form-label">{t('auth.newPwLabel')}</label>
+              <label className="form-label" htmlFor="auth-new-password">{t('auth.newPwLabel')}</label>
               <input
+                id="auth-new-password" name="new-password"
                 className="form-input" type="password"
                 placeholder="••••••••"
+                autoComplete="new-password"
                 value={pw}
                 onChange={e => setPw(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && submit()}
                 autoFocus
               />
             </div>
 
             {/* Confirm */}
             <div className="form-group">
-              <label className="form-label">{t('auth.newPwConfirm')}</label>
+              <label className="form-label" htmlFor="auth-confirm-password">{t('auth.newPwConfirm')}</label>
               <input
+                id="auth-confirm-password" name="confirm-password"
                 className="form-input" type="password"
                 placeholder="••••••••"
+                autoComplete="new-password"
                 value={confirm}
                 onChange={e => setConfirm(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && submit()}
               />
             </div>
 
@@ -106,13 +109,14 @@ export default function ResetPasswordPage({ onDone }) {
             )}
 
             <button
+              type="submit"
               className="btn btn-primary"
               style={{ width: '100%', padding: '11px 16px', fontSize: 14, borderRadius: 10 }}
-              onClick={submit}
               disabled={saving}
             >
               {saving ? t('auth.newPwSaving') : t('auth.newPwBtn')}
             </button>
+            </form>
           </>
         )}
     </AuthCard>

@@ -6,7 +6,7 @@ import { supabase } from '../../lib/supabase'
 import AttendanceModal from '../../components/AttendanceModal'
 import { generateMonthlyReport, generateAnnualReport } from './SalaryReportGenerator'
 import { DownloadSimple, Phone, TelegramLogo, FileXls, CalendarBlank, ChartBar, CheckCircle, ClipboardText, Lightning, Wrench, Clock, Trash, CaretUp, CaretDown, File, X, Copy, Plus } from '@phosphor-icons/react'
-import * as XLSX from 'xlsx'
+import { loadXlsx } from '../../lib/xlsx'
 import TimesheetModal from './TimesheetModal'
 import { todayStr } from '../../lib/date'
 
@@ -206,6 +206,7 @@ export default function Team() {
     ;(logs || []).forEach(l => { if (byWorker[l.worker_id]) { byWorker[l.worker_id].name = l.worker?.name || l.worker_id; byWorker[l.worker_id].logs.push(l) } })
     ;(pays || []).forEach(p => { if (byWorker[p.worker_id]) { byWorker[p.worker_id].name = p.worker?.name || p.worker_id; byWorker[p.worker_id].pays.push(p) } })
 
+    const XLSX = await loadXlsx()
     const wb = XLSX.utils.book_new()
 
     // ── Sheet 1: Summary ─────────────────────────────────────────────────────

@@ -9,7 +9,7 @@ import { SortableStageList } from '../tasks/SortableStage'
 import TaskCard from '../tasks/TaskCard'
 import { FileText, UploadSimple, DownloadSimple, Printer, ChatCircle, Wrench, X, Images } from '@phosphor-icons/react'
 import PhotoAssignModal from './PhotoAssignModal'
-import * as XLSX from 'xlsx'
+import { loadXlsx } from '../../lib/xlsx'
 import { todayStr } from '../../lib/date'
 import { buildReportHtml } from '../../lib/printReport'
 import { normalizeUnit, unitLabel, displayUnit } from '../../i18n/units'
@@ -289,7 +289,7 @@ export default function ProjectTasksTab({ proj, canDelete = true, canEdit = true
     setImportPreview(null)
   }
 
-  const exportXLSX = () => {
+  const exportXLSX = async () => {
     const STATUS_LABEL = {
       new: t('procTasks.statusNew'), pending: t('procTasks.statusPending'),
       approved: t('procTasks.statusApproved'), rejected: t('procTasks.statusRejected'),
@@ -306,6 +306,7 @@ export default function ProjectTasksTab({ proj, canDelete = true, canEdit = true
     const stageExport = populate('stage')
     const hasZones = pTasks.some(tk => tk.zone)
 
+    const XLSX = await loadXlsx()
     const wb = XLSX.utils.book_new()
 
     // ── Sheet 1: Tasks ────────────────────────────────────────────────────────
