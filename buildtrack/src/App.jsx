@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { MagnifyingGlass, X, MapPin, ClipboardText, Clock, Note, CheckCircle, ArrowCounterClockwise } from '@phosphor-icons/react'
+import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react'
+import { MagnifyingGlass, X, MapPin, ClipboardText, Clock, Note, CheckCircle, ArrowCounterClockwise, Sparkle } from '@phosphor-icons/react'
 import { useStore } from './store/useStore'
 import { useT } from './i18n/useLanguage'
 import LanguagePicker from './components/LanguagePicker'
@@ -13,6 +13,7 @@ import {
 } from './pages/index'
 import WorkerMaterials from './features/materials/WorkerMaterials'
 import LockoutBanner from './components/LockoutBanner'
+const AssistantModal = lazy(() => import('./components/AssistantModal'))
 import { supabase } from './lib/supabase'
 
 // ── Task Search Overlay ───────────────────────────────────────────────────────
@@ -225,6 +226,7 @@ export default function App() {
   const [page, setPage]               = useState('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [searchOpen, setSearchOpen]   = useState(false)
+  const [assistantOpen, setAssistantOpen] = useState(false)
   const [authed, setAuthed]           = useState(false)
   const [checking, setChecking]       = useState(true)
   const [recovering, setRecovering]   = useState(false)
@@ -425,6 +427,15 @@ export default function App() {
           </button>
         ))}
       </nav>
+
+      <button className="assistant-fab" onClick={() => setAssistantOpen(true)} aria-label={t('assistant.title')}>
+        <Sparkle size={24} weight="fill" />
+      </button>
+      {assistantOpen && (
+        <Suspense fallback={null}>
+          <AssistantModal onClose={() => setAssistantOpen(false)} />
+        </Suspense>
+      )}
 
       {searchOpen && (
         <TaskSearch onClose={() => setSearchOpen(false)} onNavigate={(p) => { setPage(p); setSidebarOpen(false) }} />

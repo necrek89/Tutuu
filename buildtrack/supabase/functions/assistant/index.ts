@@ -1,0 +1,342 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { budgetFor, usedFor, addUsage, anthropicCost } from '../_shared/quota.ts'
+
+// Turns what a foreman/worker says or types into proposed app actions. It only
+// PROPOSES: nothing is written here, the app shows the draft and the user
+// confirms, then the app applies it with the user's own session (so RLS and the
+// subscription lock still decide what is allowed).
+const SUPABASE_URL  = Deno.env.get('SUPABASE_URL')!
+const SERVICE_KEY   = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+const ANTHROPIC_KEY = Deno.env.get('ANTHROPIC_API_KEY')!
+// Two models only: Sonnet for actions (reliable), Haiku for questions and routing (cheap)
+const SONNET        = 'claude-sonnet-5-5'
+const HAIKU         = 'claude-haiku-5-5'
+
+const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
+
+const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, apikey, x-client-info, content-type' }
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } })
+
+// Abuse guard per function instance (not a billing limit; the monthly cap in the
+// Anthropic console is the hard stop).
+const hits = new Map<string, number[]>()
+const WINDOW_MS = 10 * 60 * 1000
+const MAX_HITS  = 25
+function limited(userId: string) {
+  const now = Date.now()
+  const recent = (hits.get(userId) || []).filter(t => now - t < WINDOW_MS)
+  recent.push(now)
+  hits.set(userId, recent)
+  return recent.length > MAX_HITS
+}
+
+const str = (v: unknown, n: number) => String(v ?? '').slice(0, n)
+
+const TOOLS = [
+  {
+    name: 'create_tasks',
+    description: 'Create one or more tasks in a project, in the order the user said them.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'integer', description: 'Project id from CONTEXT' },
+        tasks: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              text:        { type: 'string', description: 'Short action title WITHOUT the stage name, e.g. "Remove old paint and plaster"' },
+              description: { type: 'string', description: 'Details the user said for this task (how, what to check, materials, conditions), 1-3 clear sentences. Omit if there are none.' },
+              stage:       { type: 'string', description: 'Group name for this task: reuse an existing stage of the project when it fits, otherwise a short new name (an area or sub-job, e.g. "Balcony (bottom)")' },
+              zone:      { type: 'string', description: 'Only an existing zone name of that project, else omit' },
+              worker_id: { type: 'string', description: 'Worker id from CONTEXT, only if the user named who does it' },
+              priority:  { type: 'string', enum: ['high', 'normal', 'low'] },
+              deadline:  { type: 'string', description: 'YYYY-MM-DD, only if the user gave a date' },
+              photo_indexes: { type: 'array', items: { type: 'integer' }, description: 'Numbers N of attached "Photo N" that belong to this NEW task' },
+            },
+            required: ['text'],
+          },
+        },
+        warnings: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Short notes about a questionable order of work, e.g. painting right after plastering without puttying/priming. Same language as the user. Empty if the order looks fine.',
+        },
+      },
+      required: ['project_id', 'tasks'],
+    },
+  },
+  {
+    name: 'update_task',
+    description: 'Change existing tasks from CONTEXT.tasks. Include only the fields that change.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        updates: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              task_id:     { type: 'integer', description: 'Task id from CONTEXT.tasks' },
+              text:        { type: 'string', description: 'New short title' },
+              description: { type: 'string', description: 'New full description (replaces the old one)' },
+              stage:       { type: 'string', description: 'Move to this stage (group)' },
+              deadline:    { type: 'string', description: 'YYYY-MM-DD' },
+              start_date:  { type: 'string', description: 'YYYY-MM-DD' },
+              priority:    { type: 'string', enum: ['high', 'normal', 'low'] },
+              worker_id:   { type: 'string', description: 'Worker id from CONTEXT.workers to assign' },
+              status:      { type: 'string', enum: ['approved', 'new'], description: '"approved" = done, "new" = reopen' },
+            },
+            required: ['task_id'],
+          },
+        },
+      },
+      required: ['updates'],
+    },
+  },
+  {
+    name: 'delete_task',
+    description: 'Delete tasks from CONTEXT.tasks. Only when the user clearly asked to delete/remove them.',
+    input_schema: {
+      type: 'object',
+      properties: { task_ids: { type: 'array', items: { type: 'integer' } } },
+      required: ['task_ids'],
+    },
+  },
+  {
+    name: 'attach_photos',
+    description: 'Attach the photos the user sent to EXISTING tasks from CONTEXT.tasks. Only when the photo clearly belongs to that task (by what you see and what the user said).',
+    input_schema: {
+      type: 'object',
+      properties: {
+        attachments: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              task_id: { type: 'integer', description: 'Task id from CONTEXT.tasks' },
+              photo_indexes: { type: 'array', items: { type: 'integer' }, description: 'Numbers N of the attached "Photo N"' },
+            },
+            required: ['task_id', 'photo_indexes'],
+          },
+        },
+      },
+      required: ['attachments'],
+    },
+  },
+  {
+    name: 'mark_attendance',
+    description: 'Record attendance for workers for a day (default today).',
+    input_schema: {
+      type: 'object',
+      properties: {
+        date: { type: 'string', description: 'YYYY-MM-DD, default today' },
+        records: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              worker_id:  { type: 'string', description: 'Worker id from CONTEXT' },
+              status:     { type: 'string', enum: ['present', 'absent', 'sick', 'vacation'] },
+              arrived_at: { type: 'string', description: 'HH:MM, only if the user said the arrival time' },
+            },
+            required: ['worker_id', 'status'],
+          },
+        },
+      },
+      required: ['records'],
+    },
+  },
+  {
+    name: 'add_material_request',
+    description: 'Add materials that need to be bought/delivered for a project.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'integer', description: 'Project id from CONTEXT' },
+        items: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name:  { type: 'string' },
+              qty:   { type: 'number' },
+              unit:  { type: 'string', enum: ['pcs', 'm', 'm²', 'm³', 'kg', 'l', 'pack', 'roll'] },
+              notes: { type: 'string' },
+            },
+            required: ['name'],
+          },
+        },
+      },
+      required: ['project_id', 'items'],
+    },
+  },
+]
+
+const ROLE_TOOLS: Record<string, string[]> = {
+  foreman: ['create_tasks', 'update_task', 'delete_task', 'attach_photos', 'mark_attendance', 'add_material_request'],
+  manager: ['add_material_request'],
+  worker:  ['attach_photos', 'add_material_request'],
+}
+
+function systemPrompt(context: unknown) {
+  return `You are the assistant inside Tutuu, an app for construction and renovation crews.
+Turn what the user says into app actions by calling tools. You only propose; the user confirms in the app, so never say something was already done.
+
+Rules:
+- Use only ids that appear in CONTEXT. Never invent ids. If there is exactly one project, use it.
+- If something important is unclear (which project, which of two workers with the same name, how many), ask ONE short question and call no tool.
+- Keep the user's order of works. Renovation order knowledge: rough work, plastering, putty, sanding, primer, painting; floors usually after dirty wet work and before final skirting. Put a short warning in "warnings" when the order looks wrong (for example painting right after plastering with no putty/primer, or floor finish before wet work), but still propose the tasks.
+- Every task goes under a stage (a named group, usually an area or sub-job such as "Balcony (bottom)" or "Paving around the house"). Reuse an existing stage from CONTEXT when it fits; otherwise invent a short name from what the user said. The task title is the short action only and must not repeat the stage name.
+- Put the details the user said into each task's description so nothing is lost (how to do it, what to check, materials). A rule for several tasks (for example "prime before every layer") becomes its own task when it is real work, otherwise goes into the descriptions of the tasks it applies to.
+- Zones are existing room/location names only; if the user names a room that is not an existing zone, make it the stage instead.
+- Reply in the user's language, 1-2 short sentences. The app shows the action preview itself, so do not repeat every field.
+- Relative dates ("today", "tomorrow") are based on CONTEXT.today.
+- The user may attach photos, labelled "Photo 1", "Photo 2"... Look at them. To put a photo on an existing task use attach_photos with a task from CONTEXT.tasks; to put it on a task you are creating now use that task's photo_indexes. Match by what the photo shows and what the user said. If it is unclear which task a photo belongs to, do not guess: say what you see and ask. In the reply, say in one short line per photo what you see and where you are putting it.
+- To change existing tasks use update_task with ids from CONTEXT.tasks and only the fields that change (for example "make the wall orange instead of white" changes the title and the description, "move it by two days" changes the deadline: compute it from the task's current deadline; if it has none, ask for a date). Several tasks can change in one call. "This one is done" means status "approved". Use delete_task only when the user clearly asks to delete or remove tasks. The app asks the user to confirm, so do not ask for confirmation in your reply.
+- A quote like [replying to: "Stage: task title"] points at that task or draft line; find it in CONTEXT.tasks or in the last draft.
+- Earlier assistant turns may end with "[proposed: ...]": that is the draft the user was shown. If the user wants to change the latest draft (add, remove, reorder, change a date or a name), output the FULL updated draft as a new tool call, not only the change; it replaces the old one. Never write "[proposed" lines yourself.
+- If the user asks a construction or renovation question instead, answer it helpfully and briefly (no tool call).
+- If the request is about something else entirely, say briefly what you can help with: tasks, attendance, materials, photos and renovation questions.
+
+CONTEXT:
+${JSON.stringify(context)}`
+}
+
+const ROUTER_PROMPT = `You route messages for a construction-crew app. Reply with exactly one word.
+"question" = the user asks for advice or knowledge about construction/renovation (how, why, can I, how long, which material...), nothing to record.
+"action" = the user wants something recorded or changed in the app (tasks, attendance, materials, photos, editing or deleting tasks, editing a proposed draft), or it is unclear.`
+
+const ADVISOR_PROMPT = `You are an experienced renovation and construction foreman answering a colleague's question inside a crew-management app.
+- Answer in the user's language, practical and to the point. Keep it short: up to about 120 words, plain text, no headings. A short list only if it really helps.
+- Say what is allowed and what the risks are (for example what happens if you paint right after plastering), not just "no".
+- Be honest about uncertainty; drying times and norms depend on the product and conditions, so point to the manufacturer's data sheet when it matters.
+- For load-bearing structures, electrical, gas and fire safety, give general information only and recommend a qualified specialist.
+- If the user actually wants something recorded or changed in the app (create tasks, attendance, materials, photos, editing a draft), reply with exactly [[ACTION]] and nothing else.`
+
+async function claude(model: string, system: string, messages: any[], opts: { tools?: any[]; max_tokens: number }) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+    body: JSON.stringify({ model, max_tokens: opts.max_tokens, system, messages, ...(opts.tools?.length ? { tools: opts.tools } : {}) }),
+  })
+  if (!res.ok) {
+    console.error('anthropic', model, res.status, (await res.text()).slice(0, 300))
+    // 429/529 = overloaded, anything else = key or balance problem
+    throw new Error(res.status === 429 || res.status === 529 ? 'busy' : 'unavailable')
+  }
+  const out = await res.json()
+  return { out, cost: anthropicCost(model, out.usage), cutOff: out.stop_reason === 'max_tokens' }
+}
+const textOf = (out: any) => (Array.isArray(out.content) ? out.content : []).filter((b: any) => b.type === 'text').map((b: any) => b.text).join('\n').trim()
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
+
+  try {
+    const jwt = (req.headers.get('authorization') || '').replace('Bearer ', '')
+    const { data: { user }, error: authErr } = await supabase.auth.getUser(jwt)
+    if (authErr || !user) return json({ error: 'unauthorized' }, 401)
+    if (limited(user.id)) return json({ error: 'busy' }, 429)
+
+    if (Number(req.headers.get('content-length') || 0) > 6_000_000) return json({ error: 'too_large' }, 413)
+    const body = await req.json()
+
+    const messages = (Array.isArray(body.messages) ? body.messages : [])
+      .filter((m: any) => (m?.role === 'user' || m?.role === 'assistant') && typeof m.content === 'string' && m.content.trim())
+      .slice(-8)
+      .map((m: any) => ({ role: m.role, content: str(m.content, 3000) }))
+    if (!messages.length || messages[messages.length - 1].role !== 'user') return json({ error: 'bad_request' }, 400)
+
+    const images = (Array.isArray(body.images) ? body.images : [])
+      .filter((x: unknown) => typeof x === 'string' && (x as string).length < 700_000)
+      .slice(0, 5) as string[]
+    if (images.length) {
+      const last = messages[messages.length - 1]
+      last.content = [
+        ...images.flatMap((data, i) => [
+          { type: 'text', text: `Photo ${i + 1}:` },
+          { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data } },
+        ]),
+        { type: 'text', text: last.content },
+      ] as any
+    }
+
+    const { data: profile } = await supabase.from('profiles').select('role, name').eq('id', user.id).single()
+    const role = profile?.role || 'worker'
+    const allowed = ROLE_TOOLS[role] || []
+    if (!allowed.length) return json({ error: 'forbidden' }, 403)
+
+    const { who, budget, lifetime } = await budgetFor(supabase, user.id)
+    if (who === 'locked') return json({ error: 'locked' }, 403)
+    const used = await usedFor(supabase, user.id, lifetime)
+    if (used !== null && used >= budget) return json({ error: who === 'trial' ? 'trial_limit' : 'limit', quota: { used, budget } }, 429)
+    let spent = 0
+
+    const c = body.context || {}
+    const context = {
+      today: str(c.today, 10),
+      role,
+      user: str(profile?.name, 80),
+      projects: (Array.isArray(c.projects) ? c.projects : []).slice(0, 40).map((p: any) => ({
+        id: Number(p.id), name: str(p.name, 80),
+        stages: (Array.isArray(p.stages) ? p.stages : []).slice(0, 30).map((s: unknown) => str(s, 60)),
+        zones:  (Array.isArray(p.zones)  ? p.zones  : []).slice(0, 30).map((s: unknown) => str(s, 60)),
+      })),
+      tasks: (Array.isArray(c.tasks) ? c.tasks : []).slice(0, 120).map((tk: any) => ({
+        id: Number(tk.id), project_id: Number(tk.project_id), text: str(tk.text, 120), stage: tk.stage ? str(tk.stage, 60) : null,
+        description: tk.description ? str(tk.description, 160) : null,
+        deadline: tk.deadline ? str(tk.deadline, 10) : null, status: str(tk.status, 12),
+        assignee: tk.assignee ? str(tk.assignee, 80) : null,
+      })),
+      workers: (Array.isArray(c.workers) ? c.workers : []).slice(0, 150).map((w: any) => ({ id: str(w.id, 40), name: str(w.name, 80) })),
+    }
+
+    const lastText = messages[messages.length - 1].content
+    const textOnly = (m: any) => typeof m.content === 'string'
+    // Anything that needs reliability goes straight to Sonnet: photos, editing a
+    // draft, or long messages. Short plain messages are routed by Haiku first.
+    const needsSonnet = images.length > 0 || body.hasDraft === true || (typeof lastText === 'string' && lastText.length > 500)
+
+    let answered: { reply: string; actions: any[] } | null = null
+    try {
+      if (!needsSonnet) {
+        const recent = messages.slice(-3).filter(textOnly)
+        const route = await claude(HAIKU, ROUTER_PROMPT, recent, { max_tokens: 5 })
+        spent += route.cost
+        if (textOf(route.out).toLowerCase().startsWith('question')) {
+          const adv = await claude(HAIKU, ADVISOR_PROMPT, messages.filter(textOnly), { max_tokens: 1000 })
+          spent += adv.cost
+          let reply = textOf(adv.out)
+          // If it still ran out of room, end on the last complete sentence instead of mid-word
+          if (adv.cutOff) {
+            const end = Math.max(reply.lastIndexOf('. '), reply.lastIndexOf('.\n'), reply.lastIndexOf('! '), reply.lastIndexOf('? '), reply.lastIndexOf('\n'))
+            if (end > reply.length * 0.4) reply = reply.slice(0, end + 1).trim()
+          }
+          if (reply && !reply.includes('[[ACTION]]')) answered = { reply, actions: [] }
+        }
+      }
+
+      if (!answered) {
+        const act = await claude(SONNET, systemPrompt(context), messages, { tools: TOOLS.filter(t => allowed.includes(t.name)), max_tokens: 1500 })
+        spent += act.cost
+        const blocks: any[] = Array.isArray(act.out.content) ? act.out.content : []
+        answered = {
+          reply: textOf(act.out),
+          actions: blocks.filter(b => b.type === 'tool_use' && allowed.includes(b.name)).map(b => ({ tool: b.name, input: b.input })),
+        }
+      }
+    } catch (e) {
+      // Calls that already ran still cost money
+      if (spent) await addUsage(supabase, user.id, spent)
+      return json({ error: (e as Error).message === 'busy' ? 'busy' : 'unavailable' }, 503)
+    }
+
+    const total = await addUsage(supabase, user.id, spent)
+    return json({ ...answered, quota: total === null ? null : { used: total, budget } })
+  } catch (e) {
+    console.error('assistant', e)
+    return json({ error: 'server' }, 500)
+  }
+})

@@ -112,6 +112,8 @@ export const useStore = create((set, get) => ({
 
   signOut: async () => {
     await supabase.auth.signOut()
+    // The assistant history is private to whoever was signed in on this device
+    try { Object.keys(localStorage).filter(k => k.startsWith('tutuu_assistant_')).forEach(k => localStorage.removeItem(k)) } catch { /* storage blocked */ }
     set({ user: null, profile: null, role: null, tasks: [], projects: [], tools: [], team: [], joinRequests: [], isLocked: false, billingForemanId: null })
   },
 
@@ -259,7 +261,7 @@ export const useStore = create((set, get) => ({
         sendPush(task.worker_id, 'New task assigned', task.text, '/app')
       }
     }
-    return { error }
+    return { data, error }
   },
 
   updateTask: async (id, updates) => {
@@ -275,6 +277,7 @@ export const useStore = create((set, get) => ({
       set(s => ({ tasks: s.tasks.filter(t => t.id !== id) }))
       if (task?.project_id) get().recalcProgress(task.project_id)
     }
+    return { error }
   },
 
   _setTaskStatus: async (id, status, actionType, extra = {}) => {
@@ -693,6 +696,7 @@ export const useStore = create((set, get) => ({
       set(s => ({ materials: [_matRow(data), ...s.materials] }))
       get().logActivity({ action_type: 'material_added', entity_name: material.name, project_id: material.projectId || null, meta: { qty: material.qty, unit: material.unit } })
     }
+    return { error }
   },
 
   markMaterialPurchased: async (id) => {
