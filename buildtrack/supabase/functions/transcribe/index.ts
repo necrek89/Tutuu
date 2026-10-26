@@ -15,16 +15,10 @@ const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } })
 
-// No language is forced: people mix languages and the model detects them itself.
-// The prompt only lists construction words (and says several languages occur) so
-// rare terms are spelled right.
-const PROMPT = [
-  'Renovation and construction talk, languages may be mixed (Russian, English, Slovak, Czech, Serbian, Spanish...).',
-  'Ремонт, строительство: штукатурка, шпаклёвка, грунтовка, шлифовка, покраска, стяжка, плиточный клей, гипсокартон, брусчатка, цемент.',
-  'Plastering, putty, primer, sanding, drywall, screed, tile adhesive, paving stones.',
-  'Slovak/Czech: sadrokartón, omietka, tmel, penetrácia, maľovanie, lepidlo na dlažbu.',
-  'Serbian: gipskarton, malter, gleter, prajmer, krečenje.',
-].join(' ')
+// No language is forced (people mix languages) and no prompt is sent: a vocabulary prompt
+// made the model read the prompt back into the transcript on short or quiet clips.
+// Well-known "phantom" phrases it invents on near-silence are dropped instead.
+const PHANTOM = /^(продолжение следует|субтитры[^.]*|спасибо за просмотр|thanks for watching|thank you\.?|dimatorzok|редактор субтитров[^.]*)[.!\s]*$/i
 
 const hits = new Map<string, number[]>()
 function limited(userId: string) {
@@ -60,7 +54,6 @@ Deno.serve(async (req) => {
       const form = new FormData()
       form.append('file', new Blob([buf], { type }), `audio.${ext}`)
       form.append('model', model)
-      form.append('prompt', PROMPT)
       return fetch('https://api.openai.com/v1/audio/transcriptions', {
         method: 'POST',
         headers: { Authorization: `Bearer ${OPENAI_KEY}` },
@@ -80,7 +73,8 @@ Deno.serve(async (req) => {
     }
     const out = await res.json()
     const total = await addUsage(supabase, user.id, TRANSCRIBE_COST)
-    return json({ text: String(out.text || '').trim(), quota: total === null ? null : { used: total, budget } })
+    const text = String(out.text || '').trim()
+    return json({ text: PHANTOM.test(text) ? '' : text, quota: total === null ? null : { used: total, budget } })
   } catch (e) {
     console.error('transcribe', e)
     return json({ error: 'server' }, 500)

@@ -1,0 +1,30 @@
+WHAT TO CHECK AFTER APPLYING (log in as each role in a browser, one by one)
+
+Foreman
+  - sign in; projects list and tasks load; create a project, a task, edit, delete
+  - add a worker to a project; remove one; change worker phone/telegram/status in Team
+  - post a comment on a task; add a tool and assign it
+  - open Team > payroll export (reads project_workers)
+Worker
+  - sign in; "My tasks" shows only own tasks; mark one done (status -> pending); add a photo
+  - post a comment on a task of a project you are on
+  - request materials
+Client / manager (if you use them)
+  - client sees approved tasks and can read comments; manager sees the project team
+Signup / billing
+  - register a new account: profile gets created, the 30-day trial starts on first foreman sign-in
+  - an existing paying account keeps its plan; Account page still opens the billing portal
+Anonymous (no login): activity_log and task_comments must return no rows.
+
+NOT VERIFIED BY ME (needs your test)
+  - whether workers change tools themselves (take/return); only the foreman has update rights on tools
+  - manager and client roles end to end
+
+KNOWN LEFT-OVERS (not part of this file)
+  - profiles are still readable by every signed-in user (policy authenticated_can_read_profiles),
+    because adding a worker by email or invite code looks the profile up directly. Fix later with
+    two small server functions (find by email / find by code) and then remove that policy.
+  - "users can view tools" lets any signed-in user read all tools.
+  - join_requests INSERT only allows worker_id = own id, which is why inviting a worker by email fails.
+  - task-photos bucket has no file size or type limit; site has no security headers.
+If something breaks: run 023_rollback.sql (restores the old policies exactly).

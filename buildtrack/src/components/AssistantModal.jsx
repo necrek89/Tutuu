@@ -88,7 +88,7 @@ function ActionPreview({ a, photos, onPick }) {
             )}
             <ol className="assistant-list">
               {g.tasks.map((tk, i) => {
-                const meta = [tk.zone, workerName(tk.worker_id), tk.deadline].filter(Boolean).join(' · ')
+                const meta = [tk.zone && (tk.newZone ? `${tk.zone} (${t('assistant.newZone')})` : tk.zone), workerName(tk.worker_id), tk.deadline].filter(Boolean).join(' · ')
                 return (
                   <li key={i} className="assistant-pick" onClick={() => onPick?.(`${g.stage ? g.stage + ': ' : ''}${tk.text}`)}>
                     {tk.text}
@@ -107,6 +107,17 @@ function ActionPreview({ a, photos, onPick }) {
             <div>{a.warnings.map((w, i) => <div key={i}>{w}</div>)}</div>
           </div>
         )}
+      </div>
+    )
+  }
+
+  if (a.tool === 'add_zones') {
+    return (
+      <div>
+        <div className="assistant-card-title">{t('assistant.addZonesTitle', { name: a.project.name })}</div>
+        <ul className="assistant-list">
+          {a.zones.map(z => <li key={z} className="assistant-pick" onClick={() => onPick?.(z)}>{z}</li>)}
+        </ul>
       </div>
     )
   }

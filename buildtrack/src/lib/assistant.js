@@ -69,6 +69,9 @@ export function normalizeAction(action, photoCount = 0) {
     const known = proj?.stages || []
     const tasks = (Array.isArray(input.tasks) ? input.tasks : [])
       .map(tk => {
+        const rawZone = String(tk.zone || '').trim().slice(0, 60)
+        const knownZones = proj?.zones || []
+        const zone = rawZone ? (knownZones.find(x => x.toLowerCase() === rawZone.toLowerCase()) || rawZone) : null
         const rawStage = String(tk.stage || '').trim().slice(0, 60)
         const stage = rawStage ? (known.find(x => x.toLowerCase() === rawStage.toLowerCase()) || rawStage) : null
         return {
@@ -76,7 +79,8 @@ export function normalizeAction(action, photoCount = 0) {
           description: tk.description ? String(tk.description).trim().slice(0, 1000) : null,
           stage,
           newStage: !!stage && !known.includes(stage),
-          zone: proj?.zones?.includes(tk.zone) ? tk.zone : null,
+          zone,
+          newZone: !!zone && !knownZones.includes(zone),
           worker_id: roster.some(w => w.id === tk.worker_id) ? tk.worker_id : null,
           priority: PRIORITIES.includes(tk.priority) ? tk.priority : 'normal',
           deadline: /^\d{4}-\d{2}-\d{2}$/.test(tk.deadline || '') ? tk.deadline : null,
@@ -86,6 +90,17 @@ export function normalizeAction(action, photoCount = 0) {
       .filter(tk => tk.text)
     if (!proj || !tasks.length) return null
     return { tool: 'create_tasks', project: proj, tasks, warnings: (input.warnings || []).map(String).filter(Boolean).slice(0, 5) }
+  }
+
+  if (action.tool === 'add_zones') {
+    const proj = findProject(projects, input.project_id)
+    const known = (proj?.zones || []).map(z => z.toLowerCase())
+    const seen = new Set(known)
+    const zones = (Array.isArray(input.zones) ? input.zones : [])
+      .map(z => String(z || '').trim().slice(0, 60))
+      .filter(z => z && !seen.has(z.toLowerCase()) && seen.add(z.toLowerCase()))
+    if (!proj || !zones.length) return null
+    return { tool: 'add_zones', project: proj, zones }
   }
 
   if (action.tool === 'update_task') {
@@ -98,6 +113,7 @@ export function normalizeAction(action, photoCount = 0) {
         if (typeof u.text === 'string' && u.text.trim() && u.text.trim() !== task.text) changes.text = u.text.trim().slice(0, 200)
         if (typeof u.description === 'string' && u.description.trim() !== (task.description || '')) changes.description = u.description.trim().slice(0, 1000) || null
         if (typeof u.stage === 'string' && u.stage.trim() && u.stage.trim() !== task.stage) changes.stage = u.stage.trim().slice(0, 60)
+        if (typeof u.zone === 'string' && u.zone.trim() && u.zone.trim() !== task.zone) changes.zone = u.zone.trim().slice(0, 60)
         if (/^\d{4}-\d{2}-\d{2}$/.test(u.deadline || '') && u.deadline !== task.deadline) changes.deadline = u.deadline
         if (/^\d{4}-\d{2}-\d{2}$/.test(u.start_date || '') && u.start_date !== task.start_date) changes.start_date = u.start_date
         if (PRIORITIES.includes(u.priority) && u.priority !== task.priority) changes.priority = u.priority
@@ -105,7 +121,7 @@ export function normalizeAction(action, photoCount = 0) {
         if (['approved', 'new'].includes(u.status) && u.status !== task.status) changes.status = u.status
         if (!Object.keys(changes).length) return null
         const before = {
-          text: task.text, description: task.description || '', stage: task.stage || '', deadline: task.deadline || '',
+          text: task.text, description: task.description || '', stage: task.stage || '', zone: task.zone || '', deadline: task.deadline || '',
           start_date: task.start_date || '', priority: task.priority || '', worker_id: task.worker?.name || '', status: task.status,
         }
         return { task, changes, before }
@@ -201,11 +217,18 @@ export async function applyAction(a, photoFiles = []) {
 
   if (a.tool === 'create_tasks') {
     const currency = currencySymbol(st.profile?.currency)
-    // New stages become part of the project's stage list, like a CSV import does
-    const stages = Array.isArray(a.project.stages) ? [...a.project.stages] : []
-    const added = a.tasks.map(tk => tk.stage).filter(sg => sg && !stages.includes(sg))
-    if (added.length) {
-      const { error } = await st.updateProject(a.project.id, { stages: [...stages, ...new Set(added)] })
+    // New stages and zones become part of the project's lists, like a CSV import does
+    // Read the project as it is now: an add_zones action in the same batch may have just changed it
+    const cur = st.projects.find(p => Number(p.id) === Number(a.project.id)) || a.project
+    const stages = Array.isArray(cur.stages) ? [...cur.stages] : []
+    const zonesList = Array.isArray(cur.zones) ? [...cur.zones] : []
+    const addedStages = [...new Set(a.tasks.map(tk => tk.stage).filter(sg => sg && !stages.includes(sg)))]
+    const addedZones = [...new Set(a.tasks.map(tk => tk.zone).filter(z => z && !zonesList.includes(z)))]
+    if (addedStages.length || addedZones.length) {
+      const patch = {}
+      if (addedStages.length) patch.stages = [...stages, ...addedStages]
+      if (addedZones.length) patch.zones = [...zonesList, ...addedZones]
+      const { error } = await st.updateProject(a.project.id, patch)
       if (error) return { error }
     }
     // One by one so the tasks keep the order they were said in. Progress is
@@ -231,6 +254,13 @@ export async function applyAction(a, photoFiles = []) {
     return { error: null }
   }
 
+  if (a.tool === 'add_zones') {
+    const proj = st.projects.find(p => Number(p.id) === Number(a.project.id))
+    const current = Array.isArray(proj?.zones) ? proj.zones : []
+    const merged = [...current, ...a.zones.filter(z => !current.some(c => c.toLowerCase() === z.toLowerCase()))]
+    return st.updateProject(a.project.id, { zones: merged })
+  }
+
   if (a.tool === 'update_task') {
     for (const u of a.updates) {
       if (u.done) continue
@@ -241,6 +271,14 @@ export async function applyAction(a, photoFiles = []) {
         const stages = Array.isArray(proj?.stages) ? proj.stages : []
         if (proj && !stages.includes(fields.stage)) {
           const { error } = await st.updateProject(proj.id, { stages: [...stages, fields.stage] })
+          if (error) return { error }
+        }
+      }
+      if (fields.zone) {
+        const proj = st.projects.find(p => Number(p.id) === Number(u.task.project_id))
+        const zones = Array.isArray(proj?.zones) ? proj.zones : []
+        if (proj && !zones.includes(fields.zone)) {
+          const { error } = await st.updateProject(proj.id, { zones: [...zones, fields.zone] })
           if (error) return { error }
         }
       }

@@ -49,7 +49,7 @@ const TOOLS = [
               text:        { type: 'string', description: 'Short action title WITHOUT the stage name, e.g. "Remove old paint and plaster"' },
               description: { type: 'string', description: 'Details the user said for this task (how, what to check, materials, conditions), 1-3 clear sentences. Omit if there are none.' },
               stage:       { type: 'string', description: 'Group name for this task: reuse an existing stage of the project when it fits, otherwise a short new name (an area or sub-job, e.g. "Balcony (bottom)")' },
-              zone:      { type: 'string', description: 'Only an existing zone name of that project, else omit' },
+              zone:      { type: 'string', description: 'Room/location of this task, e.g. "Kitchen". Reuse an existing zone of the project when it fits; a new name is added to the project automatically.' },
               worker_id: { type: 'string', description: 'Worker id from CONTEXT, only if the user named who does it' },
               priority:  { type: 'string', enum: ['high', 'normal', 'low'] },
               deadline:  { type: 'string', description: 'YYYY-MM-DD, only if the user gave a date' },
@@ -68,6 +68,18 @@ const TOOLS = [
     },
   },
   {
+    name: 'add_zones',
+    description: 'Add zones (rooms or locations such as "Living room", "Kitchen") to a project so tasks can be grouped by them.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'integer', description: 'Project id from CONTEXT' },
+        zones: { type: 'array', items: { type: 'string' }, description: 'Short zone names in the user language' },
+      },
+      required: ['project_id', 'zones'],
+    },
+  },
+  {
     name: 'update_task',
     description: 'Change existing tasks from CONTEXT.tasks. Include only the fields that change.',
     input_schema: {
@@ -82,6 +94,7 @@ const TOOLS = [
               text:        { type: 'string', description: 'New short title' },
               description: { type: 'string', description: 'New full description (replaces the old one)' },
               stage:       { type: 'string', description: 'Move to this stage (group)' },
+              zone:        { type: 'string', description: 'Move to this zone (room/location)' },
               deadline:    { type: 'string', description: 'YYYY-MM-DD' },
               start_date:  { type: 'string', description: 'YYYY-MM-DD' },
               priority:    { type: 'string', enum: ['high', 'normal', 'low'] },
@@ -175,7 +188,7 @@ const TOOLS = [
 ]
 
 const ROLE_TOOLS: Record<string, string[]> = {
-  foreman: ['create_tasks', 'update_task', 'delete_task', 'attach_photos', 'mark_attendance', 'add_material_request'],
+  foreman: ['create_tasks', 'add_zones', 'update_task', 'delete_task', 'attach_photos', 'mark_attendance', 'add_material_request'],
   manager: ['add_material_request'],
   worker:  ['attach_photos', 'add_material_request'],
 }
@@ -190,7 +203,7 @@ Rules:
 - Keep the user's order of works. Renovation order knowledge: rough work, plastering, putty, sanding, primer, painting; floors usually after dirty wet work and before final skirting. Put a short warning in "warnings" when the order looks wrong (for example painting right after plastering with no putty/primer, or floor finish before wet work), but still propose the tasks.
 - Every task goes under a stage (a named group, usually an area or sub-job such as "Balcony (bottom)" or "Paving around the house"). Reuse an existing stage from CONTEXT when it fits; otherwise invent a short name from what the user said. The task title is the short action only and must not repeat the stage name.
 - Put the details the user said into each task's description so nothing is lost (how to do it, what to check, materials). A rule for several tasks (for example "prime before every layer") becomes its own task when it is real work, otherwise goes into the descriptions of the tasks it applies to.
-- Zones are existing room/location names only; if the user names a room that is not an existing zone, make it the stage instead.
+- Zones are the rooms or locations of a project (Kitchen, Living room, Balcony). When the user asks for zones, or lists rooms, use add_zones. A task has one zone: when the same work is needed in several rooms, create one task per room with that zone, or set the zone on existing tasks with update_task. Reuse existing zones from CONTEXT; new names are added to the project automatically. You CAN create zones, never say you cannot.
 - Reply in the user's language, 1-2 short sentences. The app shows the action preview itself, so do not repeat every field.
 - Relative dates ("today", "tomorrow") are based on CONTEXT.today.
 - The user may attach photos, labelled "Photo 1", "Photo 2"... Look at them. To put a photo on an existing task use attach_photos with a task from CONTEXT.tasks; to put it on a task you are creating now use that task's photo_indexes. Match by what the photo shows and what the user said. If it is unclear which task a photo belongs to, do not guess: say what you see and ask. In the reply, say in one short line per photo what you see and where you are putting it.
