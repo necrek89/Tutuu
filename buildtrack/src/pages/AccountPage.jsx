@@ -428,6 +428,7 @@ export default function AccountPage() {
         )}
       </div>
 
+      <TextSizeSettings />
       <SoundSettings />
 
       {/* ── Join Foreman (workers only) ── */}

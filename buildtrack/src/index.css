@@ -1023,7 +1023,7 @@ body.assistant-open .layout, body.assistant-open .tab-bar, body.assistant-open .
 .native-app .assistant-msg, .native-app .assistant-msg * { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
 
 /* Assistant button in the middle of the bottom bar (phones); the floating button stays on desktop */
-.tab-item-ai { flex: 0 0 72px; overflow: visible; padding: 0; position: relative; }
+.tab-item-ai { flex: 0 0 64px; overflow: visible; padding: 0; position: relative; }
 .tab-ai-btn {
   position: absolute; top: -18px; left: 50%; transform: translateX(-50%);
   width: 58px; height: 58px; border-radius: 50%; background: var(--accent); color: #fff;
@@ -1033,3 +1033,9 @@ body.assistant-open .layout, body.assistant-open .tab-bar, body.assistant-open .
 }
 .tab-item-ai:active .tab-ai-btn { transform: translateX(-50%) scale(0.94); }
 @media (max-width: 768px) { .assistant-fab { display: none; } }
+
+/* Narrow screens: the name makes room for the text-size button */
+@media (max-width: 520px) { .topbar-name { display: none; } }
+
+/* Bigger text shrinks the layout width, so tab labels get a little tighter */
+html[data-text-size="130"] .tab-label, html[data-text-size="150"] .tab-label { font-size: 7px; letter-spacing: -0.2px; }

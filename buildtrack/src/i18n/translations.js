@@ -8,7 +8,7 @@ const t = {
   en: {
     assistant: {
       title: 'Assistant', close: 'Close', send: 'Send', mic: 'Dictate', micStop: 'Stop',
-      placeholder: 'Say or type what to do…',
+      placeholder: 'Say or type…',
       hint: 'Try: "Kitchen: plaster, putty, primer, paint", or "Ivan arrived at 9", or "We need 10 bags of cement".',
       hintDictate: 'To speak, use the microphone on your keyboard.',
       thinking: 'Thinking…', apply: 'Apply', cancel: 'Cancel', retry: 'Try again',
@@ -345,6 +345,7 @@ const t = {
       msgPwTooShort: 'Minimum 6 characters',
       msgPwEmpty: 'Enter new password',
       msgRequestSent: 'Request sent to {name}! Wait for approval.',
+      textSizeSection: 'Text size', textSizeDesc: 'Make all text in the app larger. You can also tap Aa at the top of any screen.', textNormal: 'Standard', textLarge: 'Large', textLarger: 'Larger', textLargest: 'Largest',
       soundsSection: 'Sounds', soundsDesc: 'Short sounds when you save, finish or delete something.', soundsOn: 'Sound effects', hapticsOn: 'Vibration feedback',
       notificationsSection: 'Push Notifications',
       notificationsDesc: 'Get notified on your phone even when the app is closed',
@@ -543,7 +544,7 @@ const t = {
   ru: {
     assistant: {
       title: 'Помощник', close: 'Закрыть', send: 'Отправить', mic: 'Диктовать', micStop: 'Стоп',
-      placeholder: 'Скажите или напишите, что сделать…',
+      placeholder: 'Скажите или напишите…',
       hint: 'Например: «Кухня: штукатурка, шпаклёвка, грунтовка, покраска», или «Иван пришёл в 9», или «Нужно 10 мешков цемента».',
       hintDictate: 'Чтобы говорить, нажмите на микрофон на клавиатуре.',
       thinking: 'Думаю…', apply: 'Применить', cancel: 'Отмена', retry: 'Повторить',
@@ -880,6 +881,7 @@ const t = {
       msgPwTooShort: 'Минимум 6 символов',
       msgPwEmpty: 'Введите новый пароль',
       msgRequestSent: 'Заявка отправлена {name}! Ожидайте подтверждения.',
+      textSizeSection: 'Размер текста', textSizeDesc: 'Увеличивает весь текст в приложении. Можно также нажимать Aa вверху любого экрана.', textNormal: 'Обычный', textLarge: 'Крупный', textLarger: 'Очень крупный', textLargest: 'Максимум',
       soundsSection: 'Звуки', soundsDesc: 'Короткие звуки, когда вы сохраняете, завершаете или удаляете.', soundsOn: 'Звуковые эффекты', hapticsOn: 'Вибрация при действиях',
       notificationsSection: 'Push-уведомления',
       notificationsDesc: 'Получайте уведомления на телефон даже когда приложение закрыто',
