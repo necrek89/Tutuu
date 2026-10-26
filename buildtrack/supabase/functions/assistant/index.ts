@@ -80,6 +80,18 @@ const TOOLS = [
     },
   },
   {
+    name: 'copy_tasks_to_zones',
+    description: 'Copy existing tasks into other zones (rooms), for example the same plastering and painting tasks for the kitchen and the bedroom. Prefer this over create_tasks when the tasks already exist: it is exact and short.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        task_ids: { type: 'array', items: { type: 'integer' }, description: 'Ids of the existing tasks to copy, from CONTEXT.tasks' },
+        zones: { type: 'array', items: { type: 'string' }, description: 'Target zone names; a new name is added to the project automatically' },
+      },
+      required: ['task_ids', 'zones'],
+    },
+  },
+  {
     name: 'update_task',
     description: 'Change existing tasks from CONTEXT.tasks. Include only the fields that change.',
     input_schema: {
@@ -188,7 +200,7 @@ const TOOLS = [
 ]
 
 const ROLE_TOOLS: Record<string, string[]> = {
-  foreman: ['create_tasks', 'add_zones', 'update_task', 'delete_task', 'attach_photos', 'mark_attendance', 'add_material_request'],
+  foreman: ['create_tasks', 'add_zones', 'copy_tasks_to_zones', 'update_task', 'delete_task', 'attach_photos', 'mark_attendance', 'add_material_request'],
   manager: ['add_material_request'],
   worker:  ['attach_photos', 'add_material_request'],
 }
@@ -204,6 +216,8 @@ Rules:
 - Every task goes under a stage (a named group, usually an area or sub-job such as "Balcony (bottom)" or "Paving around the house"). Reuse an existing stage from CONTEXT when it fits; otherwise invent a short name from what the user said. The task title is the short action only and must not repeat the stage name.
 - Put the details the user said into each task's description so nothing is lost (how to do it, what to check, materials). A rule for several tasks (for example "prime before every layer") becomes its own task when it is real work, otherwise goes into the descriptions of the tasks it applies to.
 - Zones are the rooms or locations of a project (Kitchen, Living room, Balcony). When the user asks for zones, or lists rooms, use add_zones. A task has one zone: when the same work is needed in several rooms, create one task per room with that zone, or set the zone on existing tasks with update_task. Reuse existing zones from CONTEXT; new names are added to the project automatically. You CAN create zones, never say you cannot.
+- When the user wants the same work in several rooms and those tasks already exist, use copy_tasks_to_zones (never retype them with create_tasks). The original tasks stay in their own zone. If the user asks to "distribute tasks across zones" and does not say which room each belongs to, assume the work applies to every room: keep the existing tasks where they are and copy them to the other zones, and say so in one short sentence.
+- Never claim in your reply that something was added or changed unless you actually called a tool in this same answer. If you could not do it, say so.
 - Reply in the user's language, 1-2 short sentences. The app shows the action preview itself, so do not repeat every field.
 - Relative dates ("today", "tomorrow") are based on CONTEXT.today.
 - The user may attach photos, labelled "Photo 1", "Photo 2"... Look at them. To put a photo on an existing task use attach_photos with a task from CONTEXT.tasks; to put it on a task you are creating now use that task's photo_indexes. Match by what the photo shows and what the user said. If it is unclear which task a photo belongs to, do not guess: say what you see and ask. In the reply, say in one short line per photo what you see and where you are putting it.
@@ -299,6 +313,7 @@ Deno.serve(async (req) => {
       })),
       tasks: (Array.isArray(c.tasks) ? c.tasks : []).slice(0, 120).map((tk: any) => ({
         id: Number(tk.id), project_id: Number(tk.project_id), text: str(tk.text, 120), stage: tk.stage ? str(tk.stage, 60) : null,
+        zone: tk.zone ? str(tk.zone, 60) : null,
         description: tk.description ? str(tk.description, 160) : null,
         deadline: tk.deadline ? str(tk.deadline, 10) : null, status: str(tk.status, 12),
         assignee: tk.assignee ? str(tk.assignee, 80) : null,
@@ -332,8 +347,13 @@ Deno.serve(async (req) => {
       }
 
       if (!answered) {
-        const act = await claude(SONNET, systemPrompt(context), messages, { tools: TOOLS.filter(t => allowed.includes(t.name)), max_tokens: 1500 })
+        const act = await claude(SONNET, systemPrompt(context), messages, { tools: TOOLS.filter(t => allowed.includes(t.name)), max_tokens: 8000 })
         spent += act.cost
+        // A tool call that ran out of room is cut mid-way: say so instead of showing a reply that claims it was done
+        if (act.cutOff) {
+          await addUsage(supabase, user.id, spent)
+          return json({ error: 'too_long' }, 422)
+        }
         const blocks: any[] = Array.isArray(act.out.content) ? act.out.content : []
         answered = {
           reply: textOf(act.out),

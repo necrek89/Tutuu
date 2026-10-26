@@ -111,6 +111,25 @@ function ActionPreview({ a, photos, onPick }) {
     )
   }
 
+  if (a.tool === 'copy_tasks_to_zones') {
+    return (
+      <div>
+        <div className="assistant-card-title">{t('assistant.copyTitle', { n: a.copies.length, project: a.project.name })}</div>
+        {a.zones.map(z => (
+          <div key={z.name} style={{ marginTop: 6 }}>
+            <div style={{ fontSize: 13, fontWeight: 600 }}>
+              {z.name}{z.isNew && <span className="assistant-meta"> · {t('assistant.newZone')}</span>}
+            </div>
+            <ul className="assistant-list">
+              {a.sources.slice(0, 8).map(src => <li key={src.id}>{src.text}</li>)}
+              {a.sources.length > 8 && <li className="assistant-meta">+{a.sources.length - 8}</li>}
+            </ul>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
   if (a.tool === 'add_zones') {
     return (
       <div>
@@ -269,6 +288,7 @@ export default function AssistantModal({ onClose }) {
     if (code === 'limit') return t('assistant.errLimit')
     if (code === 'trial_limit') return t('assistant.errTrialLimit')
     if (code === 'locked') return t('assistant.errLocked')
+    if (code === 'too_long') return t('assistant.errTooLong')
     if (code === 'network') return t('assistant.errNetwork')
     return t(fallback)
   }

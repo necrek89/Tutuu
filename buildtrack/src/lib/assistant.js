@@ -16,7 +16,7 @@ export async function buildContext() {
     // Open tasks (newest first): what photos can be attached to
     tasks: tasks.filter(tk => tk.status !== 'approved').slice(0, 120)
       .map(tk => ({
-        id: tk.id, project_id: tk.project_id, text: tk.text, stage: tk.stage, description: tk.description,
+        id: tk.id, project_id: tk.project_id, text: tk.text, stage: tk.stage, zone: tk.zone, description: tk.description,
         deadline: tk.deadline, status: tk.status, assignee: tk.worker?.name || null,
       })),
     projects: projects.map(p => ({
@@ -101,6 +101,35 @@ export function normalizeAction(action, photoCount = 0) {
       .filter(z => z && !seen.has(z.toLowerCase()) && seen.add(z.toLowerCase()))
     if (!proj || !zones.length) return null
     return { tool: 'add_zones', project: proj, zones }
+  }
+
+  if (action.tool === 'copy_tasks_to_zones') {
+    const known = useStore.getState().tasks
+    const sources = (Array.isArray(input.task_ids) ? input.task_ids : [])
+      .map(id => known.find(tk => Number(tk.id) === Number(id))).filter(Boolean)
+    if (!sources.length) return null
+    // All copied tasks must belong to one project (zones are per project)
+    const projectId = sources[0].project_id
+    const proj = findProject(projects, projectId)
+    const same = sources.filter(tk => Number(tk.project_id) === Number(projectId))
+    const knownZones = proj?.zones || []
+    const zones = [...new Set((Array.isArray(input.zones) ? input.zones : [])
+      .map(z => String(z || '').trim().slice(0, 60)).filter(Boolean)
+      .map(z => knownZones.find(x => x.toLowerCase() === z.toLowerCase()) || z))]
+    if (!proj || !zones.length) return null
+    // Do not duplicate a task that already exists in that zone
+    const copies = []
+    for (const zone of zones) {
+      for (const src of same) {
+        if (known.some(tk => Number(tk.project_id) === Number(projectId) && tk.zone === zone && tk.text === src.text)) continue
+        copies.push({ src, zone })
+      }
+    }
+    if (!copies.length || copies.length > 60) return null
+    return {
+      tool: 'copy_tasks_to_zones', project: proj, sources: same, copies,
+      zones: zones.map(z => ({ name: z, isNew: !knownZones.includes(z) })),
+    }
   }
 
   if (action.tool === 'update_task') {
@@ -249,6 +278,31 @@ export async function applyAction(a, photoFiles = []) {
         if (res?.error) return res
         tk.photosDone = true
       }
+    }
+    await st.fetchTasks(a.project.id)
+    return { error: null }
+  }
+
+  if (a.tool === 'copy_tasks_to_zones') {
+    const cur = st.projects.find(p => Number(p.id) === Number(a.project.id)) || a.project
+    const zonesList = Array.isArray(cur.zones) ? [...cur.zones] : []
+    const addedZones = a.zones.map(z => z.name).filter(z => !zonesList.includes(z))
+    if (addedZones.length) {
+      const { error } = await st.updateProject(a.project.id, { zones: [...zonesList, ...addedZones] })
+      if (error) return { error }
+    }
+    const currency = currencySymbol(st.profile?.currency)
+    for (const c of a.copies) {
+      if (c.done) continue
+      const s0 = c.src
+      const { error } = await st.addTask({
+        text: s0.text, description: s0.description || null, project_id: a.project.id, status: 'new',
+        priority: s0.priority || 'normal', currency: s0.currency || currency, stage: s0.stage || null, zone: c.zone,
+        quantity: s0.quantity ?? null, unit: s0.unit || null, cost: s0.cost ?? null,
+        deadline: s0.deadline || null, start_date: s0.start_date || null,
+      })
+      if (error) return { error }
+      c.done = true
     }
     await st.fetchTasks(a.project.id)
     return { error: null }
