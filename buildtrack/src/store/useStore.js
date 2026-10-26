@@ -432,8 +432,9 @@ export const useStore = create((set, get) => ({
   // Unassign a worker/manager/client from a single project (project_workers row only —
   // their profile, other project memberships and existing task assignments are untouched)
   removeWorkerFromProject: async (projectId, workerId) => {
-    await supabase.from('project_workers').delete().eq('project_id', projectId).eq('worker_id', workerId)
-    set(s => ({ team: s.team.filter(m => m.id !== workerId) }))
+    const { error } = await supabase.from('project_workers').delete().eq('project_id', projectId).eq('worker_id', workerId)
+    if (!error) set(s => ({ team: s.team.filter(m => m.id !== workerId) }))
+    return { error }
   },
 
   // Add a worker to the foreman's crew without assigning them to any project yet
@@ -475,8 +476,9 @@ export const useStore = create((set, get) => ({
 
   // Update a profiles row and patch the matching entry in the local team array
   _patchTeamMember: async (workerId, patch) => {
-    await supabase.from('profiles').update(patch).eq('id', workerId)
-    set(s => ({ team: s.team.map(m => m.id === workerId ? { ...m, ...patch } : m) }))
+    const { error } = await supabase.from('profiles').update(patch).eq('id', workerId)
+    if (!error) set(s => ({ team: s.team.map(m => m.id === workerId ? { ...m, ...patch } : m) }))
+    return { error }
   },
 
   updateWorkerStatus: (workerId, status) => get()._patchTeamMember(workerId, { worker_status: status }),
@@ -701,19 +703,23 @@ export const useStore = create((set, get) => ({
   markMaterialPurchased: async (id) => {
     const material = get().materials.find(m => m.id === id)
     const now = new Date().toISOString()
-    await supabase.from('materials').update({ status: 'purchased', purchased_at: now }).eq('id', id)
+    const { error } = await supabase.from('materials').update({ status: 'purchased', purchased_at: now }).eq('id', id)
+    if (error) return { error }
     set(s => ({ materials: s.materials.map(m => m.id === id ? { ...m, status: 'purchased', purchasedAt: now } : m) }))
     if (material) get().logActivity({ action_type: 'material_purchased', entity_name: material.name, project_id: material.projectId || null })
+    return { error: null }
   },
 
   markMaterialNeeded: async (id) => {
-    await supabase.from('materials').update({ status: 'needed', purchased_at: null }).eq('id', id)
-    set(s => ({ materials: s.materials.map(m => m.id === id ? { ...m, status: 'needed', purchasedAt: null } : m) }))
+    const { error } = await supabase.from('materials').update({ status: 'needed', purchased_at: null }).eq('id', id)
+    if (!error) set(s => ({ materials: s.materials.map(m => m.id === id ? { ...m, status: 'needed', purchasedAt: null } : m) }))
+    return { error }
   },
 
   deleteMaterial: async (id) => {
-    await supabase.from('materials').delete().eq('id', id)
-    set(s => ({ materials: s.materials.filter(m => m.id !== id) }))
+    const { error } = await supabase.from('materials').delete().eq('id', id)
+    if (!error) set(s => ({ materials: s.materials.filter(m => m.id !== id) }))
+    return { error }
   },
 
   getProjectMaterials: (projectId) => get().materials.filter(m => m.projectId === projectId),
@@ -917,6 +923,7 @@ export const useStore = create((set, get) => ({
         }
       }))
     }
+    return { error }
   },
 
   updateWorkLog: async (logId, workerId, payload) => {
@@ -929,6 +936,7 @@ export const useStore = create((set, get) => ({
         }
       }))
     }
+    return { error }
   },
 
   fetchWorkLogsByDate: async (date) => {
@@ -978,8 +986,9 @@ export const useStore = create((set, get) => ({
   },
 
   deletePayment: async (id, workerId) => {
-    await supabase.from('worker_payments').delete().eq('id', id)
-    set(s => ({ payments: { ...s.payments, [workerId]: (s.payments[workerId] || []).filter(p => p.id !== id) } }))
+    const { error } = await supabase.from('worker_payments').delete().eq('id', id)
+    if (!error) set(s => ({ payments: { ...s.payments, [workerId]: (s.payments[workerId] || []).filter(p => p.id !== id) } }))
+    return { error }
   },
 
   updateMemberRate: (workerId, defaultRate, rateType) =>

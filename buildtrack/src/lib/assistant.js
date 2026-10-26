@@ -1,6 +1,7 @@
 import { supabase } from './supabase'
 import { useStore, MATERIAL_UNITS, currencySymbol } from '../store/useStore'
 import { todayStr } from './date'
+import { loadExtraContext, normalizeExtra, applyExtra } from './assistantOps'
 
 const ATTENDANCE_STATUSES = ['present', 'absent', 'sick', 'vacation']
 const PRIORITIES = ['high', 'normal', 'low']
@@ -10,8 +11,10 @@ export async function buildContext() {
   const st = useStore.getState()
   await Promise.all([st.fetchProjects(), st.role === 'foreman' ? st.fetchRoster() : null])
   await st.fetchTasks()
+  const extra = await loadExtraContext()
   const { projects, roster, role, tasks } = useStore.getState()
   return {
+    ...extra,
     today: todayStr(),
     // Open tasks (newest first): what photos can be attached to
     tasks: tasks.filter(tk => tk.status !== 'approved').slice(0, 120)
@@ -20,12 +23,12 @@ export async function buildContext() {
         deadline: tk.deadline, status: tk.status, assignee: tk.worker?.name || null,
       })),
     projects: projects.map(p => ({
-      id: p.id, name: p.name,
+      id: p.id, name: p.name, status: p.status, address: p.address, deadline: p.deadline,
       stages: Array.isArray(p.stages) ? p.stages : [],
       zones:  Array.isArray(p.zones)  ? p.zones  : [],
     })),
     workers: role === 'foreman'
-      ? roster.filter(w => !w.role || w.role === 'worker').map(w => ({ id: w.id, name: w.name }))
+      ? roster.filter(w => !w.role || w.role === 'worker').map(w => ({ id: w.id, name: w.name, rate: w.default_rate, rate_type: w.rate_type, status: w.worker_status }))
       : [],
   }
 }
@@ -210,7 +213,7 @@ export function normalizeAction(action, photoCount = 0) {
     return { tool: 'add_material_request', project: proj, items, asForeman: role === 'foreman' }
   }
 
-  return null
+  return normalizeExtra(action)
 }
 
 // Applies one normalized action with the user's own session. Returns { error } (null = ok).
@@ -391,7 +394,7 @@ export async function applyAction(a, photoFiles = []) {
     return { error: null }
   }
 
-  return { error: new Error('unknown action') }
+  return applyExtra(a, photoFiles)
 }
 
 // Speech to text on the server (much better than the on-device engine).

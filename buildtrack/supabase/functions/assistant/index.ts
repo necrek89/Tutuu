@@ -33,7 +33,7 @@ function limited(userId: string) {
 
 const str = (v: unknown, n: number) => String(v ?? '').slice(0, n)
 
-const TOOLS = [
+const TOOLS: any[] = [
   {
     name: 'create_tasks',
     description: 'Create one or more tasks in a project, in the order the user said them.',
@@ -199,10 +199,99 @@ const TOOLS = [
   },
 ]
 
+
+// ---- Everything else the app can do by hand (foreman only unless noted) ----
+const str1 = (description: string) => ({ type: 'string', description })
+const int1 = (description: string) => ({ type: 'integer', description })
+const num1 = (description: string) => ({ type: 'number', description })
+const ids = (description: string) => ({ type: 'array', items: { type: 'integer' }, description })
+const toolDef = (name: string, description: string, properties: Record<string, unknown>, required: string[]) =>
+  ({ name, description, input_schema: { type: 'object', properties, required } })
+const DATE = 'YYYY-MM-DD'
+
+const MORE_TOOLS = [
+  toolDef('add_expenses', 'Record money spent on a project (receipts, purchases, labour, transport...).', {
+    project_id: int1('Project id from CONTEXT'),
+    items: { type: 'array', items: { type: 'object', properties: {
+      title: str1('What was bought/paid, short'), amount: num1('Exact amount the user said'),
+      currency: str1('Currency code like EUR, only if the user named one; else omit'),
+      category: { type: 'string', enum: ['materials', 'labor', 'equipment', 'transport', 'other'] },
+      date: str1(DATE + ', default today'), notes: str1('Optional note'),
+      photo_index: int1('Number N of the attached "Photo N" that is the receipt for this expense'),
+    }, required: ['title', 'amount'] } },
+  }, ['project_id', 'items']),
+  toolDef('update_expense', 'Change an existing expense from CONTEXT.expenses. Include only what changes.', {
+    expense_id: int1('Expense id'), title: str1('New title'), amount: num1('New amount'),
+    category: { type: 'string', enum: ['materials', 'labor', 'equipment', 'transport', 'other'] },
+    date: str1(DATE), notes: str1('New note'),
+  }, ['expense_id']),
+  toolDef('delete_expenses', 'Delete expenses from CONTEXT.expenses. Only when clearly asked.', { expense_ids: ids('Expense ids') }, ['expense_ids']),
+
+  toolDef('add_work_logs', 'Record worked time of workers (hours or shifts) for a day.', {
+    entries: { type: 'array', items: { type: 'object', properties: {
+      worker_id: str1('Worker id from CONTEXT.workers'), date: str1(DATE + ', default today'),
+      value: num1('Number of hours or shifts'), type: { type: 'string', enum: ['hours', 'shift'], description: 'hours or shift; default the worker rate type' },
+      rate: num1('Pay rate only if the user said it and the worker has none'), notes: str1('Optional note'),
+    }, required: ['worker_id', 'value'] } },
+  }, ['entries']),
+  toolDef('update_work_log', 'Change a recorded work entry from CONTEXT.work_logs.', {
+    log_id: int1('Work log id'), value: num1('New hours/shifts'), type: { type: 'string', enum: ['hours', 'shift'] }, rate: num1('New rate'), notes: str1('New note'),
+  }, ['log_id']),
+  toolDef('delete_work_logs', 'Delete work entries from CONTEXT.work_logs. Only when clearly asked.', { log_ids: ids('Work log ids') }, ['log_ids']),
+
+  toolDef('add_payments', 'Record money paid to workers (advance, salary).', {
+    payments: { type: 'array', items: { type: 'object', properties: {
+      worker_id: str1('Worker id'), amount: num1('Exact amount'), date: str1(DATE + ', default today'), notes: str1('Optional note, e.g. advance'),
+    }, required: ['worker_id', 'amount'] } },
+  }, ['payments']),
+  toolDef('delete_payments', 'Delete payments from CONTEXT.payments. Only when clearly asked.', { payment_ids: ids('Payment ids') }, ['payment_ids']),
+
+  toolDef('add_tool', 'Add a tool/equipment item, optionally assigned to a project or a worker.', {
+    name: str1('Tool name'), location: str1('Where it is kept'), status: { type: 'string', enum: ['active', 'stored', 'lost'] },
+    project_id: int1('Assign to this project'), worker_id: str1('Give to this worker'),
+  }, ['name']),
+  toolDef('update_tool', 'Change, assign, move or return a tool from CONTEXT.tools. Set unassign=true to take it back to stock.', {
+    tool_id: int1('Tool id'), name: str1('New name'), location: str1('New location'), status: { type: 'string', enum: ['active', 'stored', 'lost'] },
+    project_id: int1('Assign to this project'), worker_id: str1('Give to this worker'), unassign: { type: 'boolean', description: 'Clear project and worker' },
+  }, ['tool_id']),
+  toolDef('delete_tools', 'Delete tools from CONTEXT.tools. Only when clearly asked.', { tool_ids: ids('Tool ids') }, ['tool_ids']),
+
+  toolDef('add_comment', 'Write a comment on a task from CONTEXT.tasks.', { task_id: int1('Task id'), text: str1('The comment text') }, ['task_id', 'text']),
+  toolDef('update_materials', 'Mark materials from CONTEXT.materials as bought, needed again, or delete them.', {
+    material_ids: ids('Material ids'), action: { type: 'string', enum: ['purchased', 'needed', 'delete'] },
+  }, ['material_ids', 'action']),
+
+  toolDef('create_project', 'Create a new project.', {
+    name: str1('Project name'), address: str1('Address'), deadline: str1(DATE),
+    stages: { type: 'array', items: { type: 'string' }, description: 'Optional stage names' },
+    zones: { type: 'array', items: { type: 'string' }, description: 'Optional zone names (rooms)' },
+  }, ['name']),
+  toolDef('update_project', 'Change a project: name, address, deadline, or mark it completed/active.', {
+    project_id: int1('Project id'), name: str1('New name'), address: str1('New address'), deadline: str1(DATE),
+    status: { type: 'string', enum: ['active', 'completed'] },
+  }, ['project_id']),
+  toolDef('delete_project', 'Delete a whole project with all its tasks, expenses and documents. Only when the user clearly and explicitly asks to delete that project.', { project_id: int1('Project id') }, ['project_id']),
+
+  toolDef('set_worker_rate', 'Set a worker pay rate (per hour or per shift).', {
+    worker_id: str1('Worker id'), rate: num1('Exact rate'), rate_type: { type: 'string', enum: ['hours', 'shift'] },
+  }, ['worker_id', 'rate', 'rate_type']),
+  toolDef('update_worker', 'Change a worker status or contacts.', {
+    worker_id: str1('Worker id'), status: { type: 'string', enum: ['on_site', 'day_off', 'sick', 'vacation', 'other'] },
+    phone: str1('Phone'), telegram: str1('Telegram'),
+  }, ['worker_id']),
+  toolDef('add_worker_by_email', 'Add a registered worker to the crew by email, optionally to projects.', {
+    email: str1('Exact email'), project_ids: ids('Projects to put the worker on'),
+  }, ['email']),
+  toolDef('assign_worker_to_projects', 'Put a crew worker on projects.', { worker_id: str1('Worker id'), project_ids: ids('Project ids') }, ['worker_id', 'project_ids']),
+  toolDef('remove_worker_from_project', 'Take a worker off a project (tasks stay).', { worker_id: str1('Worker id'), project_id: int1('Project id') }, ['worker_id', 'project_id']),
+  toolDef('respond_join_request', 'Accept or decline a pending join request from CONTEXT.join_requests.', { request_id: int1('Request id'), approve: { type: 'boolean' } }, ['request_id', 'approve']),
+]
+const MORE_NAMES = MORE_TOOLS.map(t => t.name)
+
 const ROLE_TOOLS: Record<string, string[]> = {
-  foreman: ['create_tasks', 'add_zones', 'copy_tasks_to_zones', 'update_task', 'delete_task', 'attach_photos', 'mark_attendance', 'add_material_request'],
-  manager: ['add_material_request'],
-  worker:  ['attach_photos', 'add_material_request'],
+  foreman: ['create_tasks', 'add_zones', 'copy_tasks_to_zones', 'update_task', 'delete_task', 'attach_photos', 'mark_attendance', 'add_material_request', ...MORE_NAMES],
+  manager: ['add_material_request', 'add_comment'],
+  worker:  ['attach_photos', 'add_material_request', 'add_comment'],
 }
 
 function systemPrompt(context: unknown) {
@@ -217,6 +306,8 @@ Rules:
 - Put the details the user said into each task's description so nothing is lost (how to do it, what to check, materials). A rule for several tasks (for example "prime before every layer") becomes its own task when it is real work, otherwise goes into the descriptions of the tasks it applies to.
 - Zones are the rooms or locations of a project (Kitchen, Living room, Balcony). When the user asks for zones, or lists rooms, use add_zones. A task has one zone: when the same work is needed in several rooms, create one task per room with that zone, or set the zone on existing tasks with update_task. Reuse existing zones from CONTEXT; new names are added to the project automatically. You CAN create zones, never say you cannot.
 - When the user wants the same work in several rooms and those tasks already exist, use copy_tasks_to_zones (never retype them with create_tasks). The original tasks stay in their own zone. If the user asks to "distribute tasks across zones" and does not say which room each belongs to, assume the work applies to every room: keep the existing tasks where they are and copy them to the other zones, and say so in one short sentence.
+- You can do everything the user can do by hand in the app. Money and people: use the exact numbers and names the user said, never round or guess an amount; if an amount, worker or project is unclear, ask one short question. Expenses -> add_expenses (change/delete with update_expense/delete_expenses); worked time -> add_work_logs; money paid to workers -> add_payments; tools -> add_tool/update_tool/delete_tools; comments -> add_comment; bought materials -> update_materials; projects -> create_project/update_project/delete_project; crew -> set_worker_rate, update_worker, add_worker_by_email, assign_worker_to_projects, remove_worker_from_project, respond_join_request. A worker's rate_type is in CONTEXT.workers; if the user gives hours for a worker whose rate is per shift (or the reverse), say so in the reply and ask which they mean. Photos of receipts go with add_expenses via photo_index.
+- Deleting things (delete_*, delete_project) only when the user clearly asked for that exact thing.
 - Never claim in your reply that something was added or changed unless you actually called a tool in this same answer. If you could not do it, say so.
 - Reply in the user's language, 1-2 short sentences. The app shows the action preview itself, so do not repeat every field.
 - Relative dates ("today", "tomorrow") are based on CONTEXT.today.
@@ -246,7 +337,7 @@ async function claude(model: string, system: string, messages: any[], opts: { to
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-    body: JSON.stringify({ model, max_tokens: opts.max_tokens, system, messages, ...(opts.tools?.length ? { tools: opts.tools } : {}) }),
+    body: JSON.stringify({ model, max_tokens: opts.max_tokens, system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }], messages, ...(opts.tools?.length ? { tools: opts.tools } : {}) }),
   })
   if (!res.ok) {
     console.error('anthropic', model, res.status, (await res.text()).slice(0, 300))
@@ -307,7 +398,7 @@ Deno.serve(async (req) => {
       role,
       user: str(profile?.name, 80),
       projects: (Array.isArray(c.projects) ? c.projects : []).slice(0, 40).map((p: any) => ({
-        id: Number(p.id), name: str(p.name, 80),
+        id: Number(p.id), name: str(p.name, 80), status: p.status ? str(p.status, 12) : undefined, address: p.address ? str(p.address, 80) : undefined, deadline: p.deadline ? str(p.deadline, 10) : undefined,
         stages: (Array.isArray(p.stages) ? p.stages : []).slice(0, 30).map((s: unknown) => str(s, 60)),
         zones:  (Array.isArray(p.zones)  ? p.zones  : []).slice(0, 30).map((s: unknown) => str(s, 60)),
       })),
@@ -318,7 +409,30 @@ Deno.serve(async (req) => {
         deadline: tk.deadline ? str(tk.deadline, 10) : null, status: str(tk.status, 12),
         assignee: tk.assignee ? str(tk.assignee, 80) : null,
       })),
-      workers: (Array.isArray(c.workers) ? c.workers : []).slice(0, 150).map((w: any) => ({ id: str(w.id, 40), name: str(w.name, 80) })),
+      workers: (Array.isArray(c.workers) ? c.workers : []).slice(0, 150).map((w: any) => ({
+        id: str(w.id, 40), name: str(w.name, 80),
+        rate: w.rate != null ? Number(w.rate) || 0 : undefined, rate_type: w.rate_type ? str(w.rate_type, 8) : undefined,
+        status: w.status ? str(w.status, 12) : undefined,
+      })),
+      currency: str(c.currency, 4),
+      expenses: (Array.isArray(c.expenses) ? c.expenses : []).slice(0, 30).map((e: any) => ({
+        id: Number(e.id), project_id: Number(e.project_id), title: str(e.title, 80), amount: Number(e.amount) || 0,
+        currency: str(e.currency, 4), category: str(e.category, 12), date: str(e.date, 10),
+      })),
+      work_logs: (Array.isArray(c.work_logs) ? c.work_logs : []).slice(0, 30).map((l: any) => ({
+        id: Number(l.id), worker_id: str(l.worker_id, 40), date: str(l.date, 10), type: str(l.type, 8), value: Number(l.value) || 0, rate: Number(l.rate) || 0,
+      })),
+      payments: (Array.isArray(c.payments) ? c.payments : []).slice(0, 20).map((x: any) => ({
+        id: Number(x.id), worker_id: str(x.worker_id, 40), amount: Number(x.amount) || 0, date: str(x.date, 10), notes: x.notes ? str(x.notes, 60) : null,
+      })),
+      tools: (Array.isArray(c.tools) ? c.tools : []).slice(0, 40).map((x: any) => ({
+        id: Number(x.id), name: str(x.name, 60), status: str(x.status, 10), location: x.location ? str(x.location, 60) : null,
+        project_id: x.project_id != null ? Number(x.project_id) : null, worker_id: x.worker_id ? str(x.worker_id, 40) : null,
+      })),
+      materials: (Array.isArray(c.materials) ? c.materials : []).slice(0, 40).map((m: any) => ({
+        id: Number(m.id), project_id: m.project_id != null ? Number(m.project_id) : null, name: str(m.name, 60), qty: Number(m.qty) || null, unit: m.unit ? str(m.unit, 8) : null, status: str(m.status, 10),
+      })),
+      join_requests: (Array.isArray(c.join_requests) ? c.join_requests : []).slice(0, 10).map((r: any) => ({ id: Number(r.id), worker_id: str(r.worker_id, 40), name: str(r.name, 80) })),
     }
 
     const lastText = messages[messages.length - 1].content
@@ -347,7 +461,7 @@ Deno.serve(async (req) => {
       }
 
       if (!answered) {
-        const act = await claude(SONNET, systemPrompt(context), messages, { tools: TOOLS.filter(t => allowed.includes(t.name)), max_tokens: 8000 })
+        const act = await claude(SONNET, systemPrompt(context), messages, { tools: [...TOOLS, ...MORE_TOOLS].filter(t => allowed.includes(t.name)), max_tokens: 8000 })
         spent += act.cost
         // A tool call that ran out of room is cut mid-way: say so instead of showing a reply that claims it was done
         if (act.cutOff) {

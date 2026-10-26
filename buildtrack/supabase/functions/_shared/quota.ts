@@ -15,7 +15,13 @@ export const TRANSCRIBE_COST = 400 // about 5 s of speech, rounded up
 
 export function anthropicCost(model: string, usage: any): number {
   const p = PRICE[model] || PRICE['claude-sonnet-5-5']
-  return Math.ceil((usage?.input_tokens || 0) * p.in + (usage?.output_tokens || 0) * p.out)
+  // Prompt caching: writing the cache costs 1.25x the input price, reading it 0.1x
+  return Math.ceil(
+    (usage?.input_tokens || 0) * p.in +
+    (usage?.cache_creation_input_tokens || 0) * p.in * 1.25 +
+    (usage?.cache_read_input_tokens || 0) * p.in * 0.1 +
+    (usage?.output_tokens || 0) * p.out,
+  )
 }
 
 const month = () => new Date().toISOString().slice(0, 7)

@@ -69,6 +69,17 @@ function ActionPreview({ a, photos, onPick }) {
   const roster = useStore(s => s.roster)
   const workerName = (id) => roster.find(w => w.id === id)?.name
 
+  if (a.generic) {
+    return (
+      <div>
+        <div className="assistant-card-title" style={a.danger ? { color: 'var(--danger)' } : undefined}>{a.title}</div>
+        <ul className="assistant-list">
+          {a.lines.map((l, i) => <li key={i} className="assistant-pick" onClick={() => onPick?.(l)}>{l}</li>)}
+        </ul>
+      </div>
+    )
+  }
+
   if (a.tool === 'create_tasks') {
     const groups = []
     a.tasks.forEach(tk => {
