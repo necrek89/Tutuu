@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react'
+import { useState, useEffect, useRef, useCallback, lazy, Suspense, Fragment } from 'react'
 import { MagnifyingGlass, X, MapPin, ClipboardText, Clock, Note, CheckCircle, ArrowCounterClockwise, Sparkle } from '@phosphor-icons/react'
 import { useStore } from './store/useStore'
 import { useT } from './i18n/useLanguage'
@@ -416,15 +416,22 @@ export default function App() {
       </div>
 
       <nav className="tab-bar">
-        {tabItems.map(item => (
-          <button
-            key={item.id}
-            className={`tab-item ${page === item.id ? 'active' : ''}`}
-            onClick={() => { setPage(item.id); if (item.id !== 'projects') setSelectedProject(null); }}
-          >
-            <TabIcon name={item.icon} />
-            <span className="tab-label">{item.label}</span>
-          </button>
+        {tabItems.map((item, idx) => (
+          <Fragment key={item.id}>
+            {/* The assistant sits in the middle of the bar, between the 2nd and 3rd tab */}
+            {idx === 2 && (
+              <button className="tab-item tab-item-ai" onClick={() => setAssistantOpen(true)} aria-label={t('assistant.title')}>
+                <span className="tab-ai-btn"><Sparkle size={28} weight="fill" /></span>
+              </button>
+            )}
+            <button
+              className={`tab-item ${page === item.id ? 'active' : ''}`}
+              onClick={() => { setPage(item.id); if (item.id !== 'projects') setSelectedProject(null); }}
+            >
+              <TabIcon name={item.icon} />
+              <span className="tab-label">{item.label}</span>
+            </button>
+          </Fragment>
         ))}
       </nav>
 

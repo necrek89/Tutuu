@@ -1021,3 +1021,15 @@ body.assistant-open .layout, body.assistant-open .tab-bar, body.assistant-open .
 .assistant-pick:active { background: var(--accent-light); }
 /* The native shell blocks text selection everywhere; chat messages must stay copyable */
 .native-app .assistant-msg, .native-app .assistant-msg * { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
+
+/* Assistant button in the middle of the bottom bar (phones); the floating button stays on desktop */
+.tab-item-ai { flex: 0 0 72px; overflow: visible; padding: 0; position: relative; }
+.tab-ai-btn {
+  position: absolute; top: -18px; left: 50%; transform: translateX(-50%);
+  width: 58px; height: 58px; border-radius: 50%; background: var(--accent); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 14px var(--shadow), 0 0 0 5px var(--bg);
+  transition: transform 0.12s;
+}
+.tab-item-ai:active .tab-ai-btn { transform: translateX(-50%) scale(0.94); }
+@media (max-width: 768px) { .assistant-fab { display: none; } }
