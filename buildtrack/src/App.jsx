@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, lazy, Suspense, Fragment } from 'react'
-import { MagnifyingGlass, X, MapPin, ClipboardText, Clock, Note, CheckCircle, ArrowCounterClockwise, Sparkle, TextAa } from '@phosphor-icons/react'
+import { MagnifyingGlass, X, MapPin, ClipboardText, Clock, Note, CheckCircle, ArrowCounterClockwise, Sparkle } from '@phosphor-icons/react'
 import { useStore } from './store/useStore'
 import { useT } from './i18n/useLanguage'
 import LanguagePicker from './components/LanguagePicker'
@@ -15,7 +15,7 @@ import WorkerMaterials from './features/materials/WorkerMaterials'
 import LockoutBanner from './components/LockoutBanner'
 const AssistantModal = lazy(() => import('./components/AssistantModal'))
 import { supabase } from './lib/supabase'
-import { cycleTextSize, initTextSize } from './lib/textSize'
+import { initTextSize } from './lib/textSize'
 
 // ── Task Search Overlay ───────────────────────────────────────────────────────
 function TaskSearch({ onClose, onNavigate }) {
@@ -336,12 +336,6 @@ export default function App() {
               : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
             }
           </button>
-          {/* Text size: each tap makes all text one step larger, then back to normal */}
-          <button
-            onClick={cycleTextSize}
-            aria-label={t('account.textSizeSection')}
-            style={{ background:'none', border:'none', cursor:'pointer', padding:'4px 6px', borderRadius:8, color:'var(--text-secondary)', display:'flex', alignItems:'center' }}
-          ><TextAa size={20} weight="bold" /></button>
           {/* Search button — only for foreman/manager/worker */}
           {(role === 'foreman' || role === 'manager' || role === 'worker') && (
             <button
@@ -355,7 +349,7 @@ export default function App() {
               }}
             ><MagnifyingGlass size={18} weight="bold" /></button>
           )}
-          <span className="topbar-name" style={{ fontSize:12, color:'#888' }}>{profile?.name}</span>
+          <span style={{ fontSize:12, color:'#888' }}>{profile?.name}</span>
           <div style={avatarStyle} onClick={() => setPage('account')} title="Account">
             {profile?.avatar_url
               ? <img src={profile.avatar_url} alt="avatar" style={{ width:'100%', height:'100%', objectFit:'cover' }} />

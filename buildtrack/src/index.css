@@ -1034,8 +1034,5 @@ body.assistant-open .layout, body.assistant-open .tab-bar, body.assistant-open .
 .tab-item-ai:active .tab-ai-btn { transform: translateX(-50%) scale(0.94); }
 @media (max-width: 768px) { .assistant-fab { display: none; } }
 
-/* Narrow screens: the name makes room for the text-size button */
-@media (max-width: 520px) { .topbar-name { display: none; } }
-
 /* Bigger text shrinks the layout width, so tab labels get a little tighter */
 html[data-text-size="130"] .tab-label, html[data-text-size="150"] .tab-label { font-size: 7px; letter-spacing: -0.2px; }

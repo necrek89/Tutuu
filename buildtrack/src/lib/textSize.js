@@ -55,7 +55,3 @@ export function setTextSize(pct) {
   try { localStorage.setItem(KEY, String(pct)) } catch { /* storage blocked */ }
   window.dispatchEvent(new Event('tutuu-text-size'))
 }
-
-export function cycleTextSize() {
-  setTextSize(TEXT_SIZES[(TEXT_SIZES.indexOf(current) + 1) % TEXT_SIZES.length])
-}
