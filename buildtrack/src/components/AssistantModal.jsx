@@ -4,6 +4,7 @@ import { useStore } from '../store/useStore'
 import { useT } from '../i18n/useLanguage'
 import { buildContext, askAssistant, normalizeAction, applyAction, transcribeAudio, warmUpTranscribe } from '../lib/assistant'
 import { prepareImage } from '../lib/imagePrep'
+import { keepScreenAwake } from '../lib/keepAwake'
 
 const SpeechRec = typeof window !== 'undefined' ? (window.SpeechRecognition || window.webkitSpeechRecognition) : null
 // Preferred: record audio and transcribe on the server (accurate, same on every
@@ -183,6 +184,7 @@ export default function AssistantModal({ onClose }) {
   const [messages, setMessages]   = useState(loadHistory)
   const [quota, setQuota]         = useState(null)
   const [headMenu, setHeadMenu]   = useState(false)
+  const [sendWhenReady, setSendWhenReady] = useState(false)
   const [replyTo, setReplyTo]     = useState('')
   const [input, setInput]         = useState('')
   const [busy, setBusy]           = useState(false)
@@ -213,6 +215,13 @@ export default function AssistantModal({ onClose }) {
     el.scrollTop = el.scrollHeight
   }, [input])
   langRef.current = lang
+
+  // The screen must not dim or lock while the user is talking
+  useEffect(() => {
+    if (!listening) return
+    keepScreenAwake(true)
+    return () => keepScreenAwake(false)
+  }, [listening])
 
   // While the assistant is open the page behind is not laid out at all: opening the
   // keyboard resizes the view, and re-laying out a long project list on every
@@ -375,6 +384,7 @@ export default function AssistantModal({ onClose }) {
       s.stopped = true
       clearInterval(s.timer)
       setListening(false)
+      setTranscribing(true) // the last phrase is still being converted; cleared when the queue is empty
       cutSegment(s, true)
       return
     }
@@ -416,6 +426,24 @@ export default function AssistantModal({ onClose }) {
   }
 
   const removePhoto = (id) => setPhotos(p => p.filter(x => x.id !== id))
+
+  // Send tapped while still recording: stop, let the last phrase finish converting, then send
+  const onSendClick = () => {
+    if (listening || transcribing) {
+      if (!CAN_RECORD) { stopListening(); send(); return }
+      setSendWhenReady(true)
+      if (listening) stopListening()
+      return
+    }
+    send()
+  }
+
+  useEffect(() => {
+    if (sendWhenReady && !listening && !transcribing) {
+      setSendWhenReady(false)
+      send()
+    }
+  }, [sendWhenReady, listening, transcribing])
 
   const send = async () => {
     const text = input.trim()
@@ -636,7 +664,7 @@ export default function AssistantModal({ onClose }) {
             placeholder={t('assistant.placeholder')}
             maxLength={2000}
           />
-          <button className="assistant-send" onClick={send} disabled={busy || prepping || transcribing || (listening && CAN_RECORD) || (!input.trim() && !photos.length)} aria-label={t('assistant.send')}>
+          <button className="assistant-send" onClick={onSendClick} disabled={busy || prepping || sendWhenReady || (!listening && !transcribing && !input.trim() && !photos.length)} aria-label={t('assistant.send')}>
             <PaperPlaneTilt size={18} weight="fill" />
           </button>
         </div>

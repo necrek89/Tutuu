@@ -445,8 +445,9 @@ export const useStore = create((set, get) => ({
       const roster = (await get()._buildRoster()) || []
       if (roster.length >= PLANS.standard.maxWorkers) return { error: 'limit_workers' }
     }
-    const { data: worker, error } = await supabase
-      .from('profiles').select('id, name, role').eq('email', email.trim().toLowerCase()).single()
+    // Profiles of strangers are not readable; a server function finds one person by exact email
+    const { data: found, error } = await supabase.rpc('find_profile_by_email', { p_email: email })
+    const worker = found?.[0]
     if (error || !worker) return { error: 'User not found. Ask them to register first.' }
     if (worker.role !== 'worker') return { error: 'This user is not registered as a Worker.' }
     const { error: insErr } = await supabase.from('join_requests')
@@ -487,11 +488,8 @@ export const useStore = create((set, get) => ({
   sendJoinRequest: async (inviteCode) => {
     const { profile } = get()
     // Найти прораба по коду
-    const { data: foreman, error: fErr } = await supabase
-      .from('profiles')
-      .select('id, name, role')
-      .eq('invite_code', inviteCode.trim().toLowerCase())
-      .single()
+    const { data: foundForeman, error: fErr } = await supabase.rpc('find_foreman_by_code', { p_code: inviteCode })
+    const foreman = foundForeman?.[0]
     if (fErr || !foreman) return { error: 'Foreman not found. Check the code.' }
     if (foreman.role !== 'foreman') return { error: 'This code does not belong to a foreman.' }
     if (foreman.id === profile.id) return { error: 'You cannot join yourself.' }
@@ -551,8 +549,8 @@ export const useStore = create((set, get) => ({
 
   addManagerToTeam: async (email) => {
     const { projects: allProjects } = get()
-    const { data: mgr, error } = await supabase
-      .from('profiles').select('id, name, role').eq('email', email.trim().toLowerCase()).single()
+    const { data: foundMgr, error } = await supabase.rpc('find_profile_by_email', { p_email: email })
+    const mgr = foundMgr?.[0]
     if (error || !mgr) return { error: 'User not found. Ask them to register first.' }
     if (mgr.role !== 'manager') return { error: 'This user is not registered as a Manager.' }
     if (!allProjects.length) return { error: 'Create at least one project first.' }
