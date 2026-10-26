@@ -1,3 +1,4 @@
+import { playSound } from '../lib/sound'
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
 import { todayStr, toLocalDateStr } from '../lib/date'
@@ -1051,12 +1052,27 @@ const MUTATING_ACTIONS = [
   'addPayment', 'deletePayment', 'updateMemberRate',
   'saveAttendance', 'copyYesterdayAttendance',
 ]
+// Sound per action: creating and finishing things chime, deleting thuds, any error buzzes
+const SOUND_FOR = {
+  createProject: 'success', addTask: 'success', addTool: 'success', addMaterialRequest: 'success', addMaterial: 'success',
+  addExpense: 'success', addDocument: 'success', addWorkLog: 'success', addPayment: 'success', saveAttendance: 'success',
+  addWorkerToTeam: 'success', addWorkerToProject: 'success', addManagerToTeam: 'success', approveJoinRequest: 'success',
+  submitTask: 'success', approveTask: 'done',
+  deleteProject: 'delete', deleteTask: 'delete', deleteTool: 'delete', deleteMaterial: 'delete', deleteMaterialRequest: 'delete',
+  deleteExpense: 'delete', deleteDocument: 'delete', deleteWorkLog: 'delete', deletePayment: 'delete',
+  removeWorkerFromProject: 'delete', rejectTask: 'delete', rejectJoinRequest: 'delete',
+}
 const guardedActions = {}
 for (const name of MUTATING_ACTIONS) {
   const original = useStore.getState()[name]
   guardedActions[name] = (...args) => {
-    if (useStore.getState().isLocked) return Promise.resolve({ error: 'locked' })
-    return original(...args)
+    if (useStore.getState().isLocked) { playSound('error'); return Promise.resolve({ error: 'locked' }) }
+    const out = original(...args)
+    const kind = SOUND_FOR[name]
+    if (kind && out && typeof out.then === 'function') {
+      out.then(res => playSound(res?.error ? 'error' : kind), () => playSound('error'))
+    }
+    return out
   }
 }
 useStore.setState(guardedActions)

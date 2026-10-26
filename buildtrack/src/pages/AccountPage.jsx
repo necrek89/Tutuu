@@ -428,6 +428,8 @@ export default function AccountPage() {
         )}
       </div>
 
+      <SoundSettings />
+
       {/* ── Join Foreman (workers only) ── */}
       {profile?.role === 'worker' && (
         <div className="card card-body" style={{ marginBottom:12 }}>

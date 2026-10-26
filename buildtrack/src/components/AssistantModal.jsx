@@ -5,6 +5,7 @@ import { useT } from '../i18n/useLanguage'
 import { buildContext, askAssistant, normalizeAction, applyAction, transcribeAudio, warmUpTranscribe } from '../lib/assistant'
 import { prepareImage } from '../lib/imagePrep'
 import { keepScreenAwake } from '../lib/keepAwake'
+import { playSound, quietly } from '../lib/sound'
 
 const SpeechRec = typeof window !== 'undefined' ? (window.SpeechRecognition || window.webkitSpeechRecognition) : null
 // Preferred: record audio and transcribe on the server (accurate, same on every
@@ -357,6 +358,7 @@ export default function AssistantModal({ onClose }) {
     try { beginSegment(s) } catch { stream.getTracks().forEach(tr => tr.stop()); setErr(t('assistant.errMic')); return }
     segRef.current = s
     setListening(true)
+    playSound('recStart')
     s.timer = setInterval(() => {
       const now = Date.now()
       if (level) {
@@ -385,6 +387,7 @@ export default function AssistantModal({ onClose }) {
       clearInterval(s.timer)
       setListening(false)
       setTranscribing(true) // the last phrase is still being converted; cleared when the queue is empty
+      playSound('recStop')
       cutSegment(s, true)
       return
     }
@@ -467,6 +470,7 @@ export default function AssistantModal({ onClose }) {
       const hasDraft = !!last && ['pending', 'error'].includes(last.state)
       const { reply, actions, quota: q } = await askAssistant(next.map(toApi), context, sent.map(x => x.b64), hasDraft)
       if (q) setQuota(q)
+      playSound('reply')
       const normalized = actions.map(x => normalizeAction(x, sent.length)).filter(Boolean)
       if (!reply && !normalized.length) setErr(t('assistant.errNothing'))
       else setMessages(m => [
@@ -478,6 +482,7 @@ export default function AssistantModal({ onClose }) {
         },
       ])
     } catch (e) {
+      playSound('error')
       setErr(errText(e.message))
     } finally {
       setBusy(false)
@@ -511,13 +516,20 @@ export default function AssistantModal({ onClose }) {
 
   const apply = async (i) => {
     setState(i, 'applying')
-    for (const a of messages[i].actions) {
-      const { error } = await applyAction(a, messages[i].photoFiles)
-      if (error) {
-        setState(i, 'error', error === 'locked' ? t('assistant.errLocked') : error?.message === 'upload' ? t('assistant.errUpload') : t('assistant.errSave'))
-        return
+    // The batch plays one sound at the end instead of one per task
+    const failure = await quietly(async () => {
+      for (const a of messages[i].actions) {
+        const { error } = await applyAction(a, messages[i].photoFiles)
+        if (error) return error
       }
+      return null
+    })
+    if (failure) {
+      playSound('error')
+      setState(i, 'error', failure === 'locked' ? t('assistant.errLocked') : failure?.message === 'upload' ? t('assistant.errUpload') : t('assistant.errSave'))
+      return
     }
+    playSound(messages[i].actions.some(a => a.tool === 'delete_task') ? 'delete' : 'success')
     setState(i, 'applied')
   }
 
