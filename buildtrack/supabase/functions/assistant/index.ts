@@ -50,6 +50,33 @@ async function claude(model: string, system: string, messages: any[], opts: { to
 }
 const textOf = (out: any) => (Array.isArray(out.content) ? out.content : []).filter((b: any) => b.type === 'text').map((b: any) => b.text).join('\n').trim()
 
+// Checks a tool call against the JSON schema subset the tools use (type, required, enum, items)
+function matches(schema: any, v: any): boolean {
+  if (!schema) return true
+  switch (schema.type) {
+    case 'object': {
+      if (v === null || typeof v !== 'object' || Array.isArray(v)) return false
+      for (const k of schema.required || []) if (v[k] === undefined || v[k] === null) return false
+      for (const [k, sub] of Object.entries(schema.properties || {})) if (v[k] !== undefined && v[k] !== null && !matches(sub, v[k])) return false
+      return true
+    }
+    case 'array': return Array.isArray(v) && v.every((x: any) => matches(schema.items, x))
+    case 'string': return typeof v === 'string' && (!schema.enum || schema.enum.includes(v))
+    case 'integer': return Number.isInteger(v)
+    case 'number': return typeof v === 'number' && Number.isFinite(v)
+    case 'boolean': return typeof v === 'boolean'
+    default: return true
+  }
+}
+
+// An answer is usable when every tool call fits its schema, and there is either a tool call or some text
+function wellFormed(out: any, toolList: any[]): boolean {
+  const blocks: any[] = Array.isArray(out.content) ? out.content : []
+  const calls = blocks.filter(b => b.type === 'tool_use')
+  if (!calls.length) return textOf(out).length > 0
+  return calls.every(c => { const def = toolList.find(t => t.name === c.name); return !!def && matches(def.input_schema, c.input) })
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
 
@@ -140,7 +167,7 @@ Deno.serve(async (req) => {
     const textOnly = (m: any) => typeof m.content === 'string'
     // Anything that needs reliability goes straight to Sonnet: photos, editing a
     // draft, or long messages. Short plain messages are routed by Haiku first.
-    const needsSonnet = images.length > 0 || body.hasDraft === true || (typeof lastText === 'string' && lastText.length > 500)
+    const needsSonnet = images.length > 0 || body.hasDraft === true || (typeof lastText === 'string' && lastText.length > 350)
 
     let answered: { reply: string; actions: any[] } | null = null
     try {
@@ -162,8 +189,19 @@ Deno.serve(async (req) => {
       }
 
       if (!answered) {
-        const act = await claude(SONNET, systemPrompt(context), messages, { tools: [...TOOLS, ...MORE_TOOLS].filter(t => allowed.includes(t.name)), max_tokens: 8000 })
+        const toolList = [...TOOLS, ...MORE_TOOLS].filter(t => allowed.includes(t.name))
+        // Short plain commands go to Haiku (about 16x cheaper); long dictations, photos and edits of a
+        // draft go to Sonnet. If Haiku's answer is malformed or cut off, Sonnet does it again.
+        let model = needsSonnet ? SONNET : HAIKU
+        let act = await claude(model, systemPrompt(context), messages, { tools: toolList, max_tokens: 8000 })
         spent += act.cost
+        if (model === HAIKU && (act.cutOff || !wellFormed(act.out, toolList))) {
+          console.log(JSON.stringify({ assistant: 'escalated_to_sonnet', reason: act.cutOff ? 'cut_off' : 'malformed_or_empty' }))
+          model = SONNET
+          act = await claude(model, systemPrompt(context), messages, { tools: toolList, max_tokens: 8000 })
+          spent += act.cost
+        }
+        console.log(JSON.stringify({ assistant: 'action', model, chars: typeof lastText === 'string' ? lastText.length : 0, cost: act.cost }))
         // A tool call that ran out of room is cut mid-way: say so instead of showing a reply that claims it was done
         if (act.cutOff) {
           await addUsage(supabase, user.id, spent)
