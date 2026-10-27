@@ -3,7 +3,7 @@ import { supabase } from './supabase'
 // Plan pricing/limits live in ./plans (no imports, so the prerendered public
 // pages can use them without loading the Supabase client). Re-exported here so
 // the app's existing imports keep working.
-export { PLANS, fmtPrice } from './plans'
+export { PLANS, fmtPrice, limitsFor } from './plans'
 
 // Opens Paddle's hosted Customer Portal in a new tab, where the foreman can
 // cancel their subscription or update their card. Returns { ok: true } on

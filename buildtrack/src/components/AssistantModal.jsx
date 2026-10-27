@@ -568,7 +568,9 @@ export default function AssistantModal({ onClose }) {
     })
     if (failure) {
       playSound('error')
-      setState(i, 'error', failure === 'locked' ? t('assistant.errLocked') : failure?.message === 'upload' ? t('assistant.errUpload') : t('assistant.errSave'))
+      const code = typeof failure === 'string' ? failure : failure?.message
+      setState(i, 'error', code === 'locked' ? t('assistant.errLocked') : code === 'upload' ? t('assistant.errUpload')
+        : code === 'limit_projects' ? t('errors.limitProjects') : code === 'limit_workers' ? t('errors.limitWorkers') : t('assistant.errSave'))
       return
     }
     playSound(messages[i].actions.some(a => a.tool === 'delete_task') ? 'delete' : 'success')

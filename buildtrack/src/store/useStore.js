@@ -2,7 +2,7 @@ import { playSound } from '../lib/sound'
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
 import { todayStr, toLocalDateStr } from '../lib/date'
-import { resolveBillingState, PLANS } from '../lib/billing'
+import { resolveBillingState, limitsFor } from '../lib/billing'
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
 
@@ -177,9 +177,10 @@ export const useStore = create((set, get) => ({
 
   createProject: async (payload) => {
     const { profile, projects } = get()
-    if (profile?.plan === 'standard') {
+    const lim = limitsFor(profile)
+    if (lim.maxActiveProjects != null) {
       const activeCount = projects.filter(p => p.status !== 'completed').length
-      if (activeCount >= PLANS.standard.maxActiveProjects) return { error: 'limit_projects' }
+      if (activeCount >= lim.maxActiveProjects) return { error: 'limit_projects' }
     }
     const { error } = await supabase.from('projects').insert({ ...payload, foreman_id: profile.id, progress: 0 })
     if (!error) {
@@ -443,9 +444,10 @@ export const useStore = create((set, get) => ({
   // separately with addWorkerToProject.
   addWorkerToTeam: async (email) => {
     const { profile } = get()
-    if (profile?.plan === 'standard') {
+    const lim = limitsFor(profile)
+    if (lim.maxWorkers != null) {
       const roster = (await get()._buildRoster()) || []
-      if (roster.length >= PLANS.standard.maxWorkers) return { error: 'limit_workers' }
+      if (roster.length >= lim.maxWorkers) return { error: 'limit_workers' }
     }
     // Profiles of strangers are not readable; a server function finds one person by exact email
     const { data: found, error } = await supabase.rpc('find_profile_by_email', { p_email: email })
@@ -530,9 +532,10 @@ export const useStore = create((set, get) => ({
   // "+ Add" на вкладке Team внутри каждого проекта.
   approveJoinRequest: async (requestId, workerId) => {
     const { joinRequests, profile } = get()
-    if (profile?.plan === 'standard') {
+    const lim = limitsFor(profile)
+    if (lim.maxWorkers != null) {
       const roster = (await get()._buildRoster()) || []
-      if (roster.length >= PLANS.standard.maxWorkers) return { error: 'limit_workers' }
+      if (roster.length >= lim.maxWorkers) return { error: 'limit_workers' }
     }
     const req = joinRequests.find(r => r.id === requestId)
     const workerName = req?.worker?.name || 'Unknown'
