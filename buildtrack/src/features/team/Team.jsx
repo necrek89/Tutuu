@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Badge, Button, StatCard, EmptyState, Alert } from '../../components/UI'
+import ShareInvite from '../../components/ShareInvite'
 import { useT } from '../../i18n/useLanguage'
 import { useStore, currencySymbol } from '../../store/useStore'
 import { supabase } from '../../lib/supabase'
@@ -58,6 +59,8 @@ const STATUS_CYCLE = ['on_site', 'day_off', 'sick', 'vacation', 'other']
 // ─── TEAM ────────────────────────────────────────────────────────────────────
 export default function Team() {
   const { t, lang } = useT()
+  const sentInvites = useStore(s => s.sentInvites)
+  const withdrawInvite = useStore(s => s.withdrawInvite)
   const { team, projects, tasks, tools, fetchProjects, fetchAllWorkers, updateWorkerStatus, updateWorkerContact, profile, joinRequests, fetchJoinRequests, approveJoinRequest, rejectJoinRequest, addManagerToTeam, addWorkerToTeam, addWorkerToProject, removeWorkerFromProject, workLogs, fetchWorkLogs, addWorkLog, deleteWorkLog, updateMemberRate, attendance, payments, fetchPayments, addPayment, deletePayment } = useStore()
   const [showInvite, setShowInvite] = useState(false)
   const [email, setEmail]           = useState('')
@@ -98,7 +101,7 @@ export default function Team() {
     fetchProjects().then(() => {
       fetchAllWorkers()
     })
-    if (profile?.role === 'foreman') fetchJoinRequests()
+    if (profile?.role === 'foreman') { fetchJoinRequests(); useStore.getState().fetchSentInvites() }
     useStore.getState().fetchAttendance(todayStr())
   }, [])
 
@@ -114,7 +117,7 @@ export default function Team() {
     setLoading(true); setMsg('')
     const { error, name } = await addWorkerToTeam(email.trim())
     if (error) { setMsg(billingErrorMsg(error)); setLoading(false); return }
-    setMsg(`${name} added!`)
+    setMsg(t('invite.inviteSent', { name }))
     fetchAllWorkers(); setEmail('')
     setLoading(false)
   }
@@ -390,19 +393,7 @@ export default function Team() {
               {t('team.codeMethod')}
             </div>
             <div style={{ fontSize:12, color:'var(--text-secondary)', marginBottom:8 }}>{t('team.codeDesc')}</div>
-            <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-              <div style={{
-                flex:1, fontFamily:'monospace', fontSize:14, fontWeight:700, letterSpacing:'.04em',
-                padding:'8px 12px', borderRadius:8, background:'var(--bg-subtle)',
-                border:'0.5px solid var(--border-medium)', color:'var(--text-primary)',
-                overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
-              }}>
-                {profile?.invite_code || '—'}
-              </div>
-              <Button variant="primary" size="sm" onClick={copyInviteLink}>
-                {codeCopied ? t('team.copied') : <><Copy size={13} weight="bold" style={{ marginRight:4, verticalAlign:-2 }} />{t('team.copyCode')}</>}
-              </Button>
-            </div>
+            <ShareInvite />
           </div>
 
           {/* Рабочий по email */}
@@ -420,6 +411,17 @@ export default function Team() {
             {msg && (
               <div style={{ marginTop:8, fontSize:12, padding:'6px 10px', borderRadius:6, background: msg.includes('added') || msg.includes('!') ? 'var(--success-bg)' : 'var(--danger-bg)', color: msg.includes('added') || msg.includes('!') ? 'var(--success)' : 'var(--danger)' }}>
                 {msg}
+              </div>
+            )}
+            {sentInvites.length > 0 && (
+              <div style={{ marginTop:12 }}>
+                <div style={{ fontSize:11, fontWeight:700, color:'var(--text-secondary)', textTransform:'uppercase', letterSpacing:'.06em', marginBottom:6 }}>{t('invite.sentTitle')}</div>
+                {sentInvites.map(r => (
+                  <div key={r.id} style={{ display:'flex', alignItems:'center', gap:8, padding:'6px 0', borderTop:'0.5px solid var(--border-medium)' }}>
+                    <div style={{ flex:1, fontSize:13 }}>{r.worker?.name || '—'} <span style={{ color:'var(--text-secondary)', fontSize:12 }}>· {t('invite.waiting')}</span></div>
+                    <Button size="sm" onClick={() => withdrawInvite(r.id)}>{t('invite.withdraw')}</Button>
+                  </div>
+                ))}
               </div>
             )}
           </div>

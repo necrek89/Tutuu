@@ -3,6 +3,7 @@ import { Note, Clock, CheckCircle, ArrowCounterClockwise, Package, ShoppingCart,
 import { EmptyState } from '../../components/UI'
 import { useT } from '../../i18n/useLanguage'
 import { useStore } from '../../store/useStore'
+import JoinInbox from '../../components/JoinInbox'
 
 // ─── NOTIFICATIONS / ACTIVITY LOG ────────────────────────────────────────────
 
@@ -103,6 +104,8 @@ export default function Notifications({ onNavigate }) {
       <div className="page-header">
         <h1 className="page-title">{activityLabel(lang, 'title')}</h1>
       </div>
+
+      <JoinInbox />
 
       {/* Filter bar */}
       <div className="filter-bar" style={{ flexWrap:'wrap', gap:6 }}>

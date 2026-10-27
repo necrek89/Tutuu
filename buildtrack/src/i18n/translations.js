@@ -6,6 +6,7 @@
 const t = {
   // ── Navigation ──────────────────────────────────────────────────────────────
   en: {
+    invite: { shareTextWorker: 'Add me to your crew on Tutuu. Open this link: ', shareTextForeman: 'Join my crew on Tutuu. Open this link: ', share: 'Share', copied: 'Link copied', copyFailed: 'Could not copy', myCodeSection: 'My invite code', myCodeDesc: 'Send this link to your foreman (WhatsApp, SMS...). They tap it and invite you with one button; you accept the invitation.', invitedYou: 'invites you to join their crew', wantsToJoin: 'wants to join your crew', inboxWorker: 'Invitations', inboxForeman: 'Join requests', accept: 'Accept', approve: 'Approve', decline: 'Decline', failed: 'Something went wrong. Try again.', linkTitle: 'Crew invitation', linkNotFound: 'This invitation link is not valid.', ownLink: 'This is your own invitation link.', sameRole: 'You cannot connect two accounts of the same role.', askJoinCrew: 'Send a request to join the crew of {name}? They will approve it.', askInvite: 'Invite {name} to your crew? They will get an invitation and accept it.', sendRequest: 'Send request', sendInvite: 'Send invitation', later: 'Later', done: 'Close', requestSent: 'Request sent to {name}. You join after they approve.', inviteSent: '{name} invited! They join after accepting.', sentTitle: 'Invitations sent', waiting: 'waiting for an answer', withdraw: 'Withdraw' },
     assistant: {
       title: 'Assistant', close: 'Close', send: 'Send', mic: 'Dictate', micStop: 'Stop',
       placeholder: 'Say or type…',
@@ -66,7 +67,7 @@ const t = {
       op_delete_project: 'Delete project: {name}',
       op_set_worker_rate: 'Change pay rate',
       op_update_worker: 'Change worker',
-      op_add_worker_by_email: 'Add worker to the crew',
+      op_add_worker_by_email: 'Invite worker to the crew', inviteNote: 'The worker gets an invitation and joins after accepting',
       op_assign_worker_to_projects: 'Put on projects',
       op_remove_worker_from_project: 'Take off a project',
       op_respond_join_request: 'Join request',
@@ -103,7 +104,7 @@ const t = {
     },
     roles: { foreman: 'Foreman', manager: 'Manager', worker: 'Worker', client: 'Client' },
     lockout: { foremanMsg: 'Your free trial has ended — subscribe to keep creating and editing.', foremanCta: 'Subscribe', memberMsg: "Your data is safe, but your foreman's subscription needs attention — changes are paused until they resubscribe.", },
-    errors: { deleteFailed: 'The project was not deleted. Check your connection and try again.', limitWorkers: 'Worker limit reached: 3 on the free trial, 10 on Standard, unlimited on Pro. Choose a plan to add more.', limitProjects: 'Project limit reached: 1 on the free trial, 3 on Standard, unlimited on Pro. Choose a plan to add more.', locked: 'Your trial has ended. Subscribe to continue.', },
+    errors: { deleteFailed: 'The project was not deleted. Check your connection and try again.', limitWorkers: 'The limit of workers on projects is reached: 3 on the free trial, 10 on Standard, unlimited on Pro. Your crew itself has no limit. Choose a plan to add more to projects.', limitProjects: 'Project limit reached: 1 on the free trial, 3 on Standard, unlimited on Pro. Choose a plan to add more.', locked: 'Your trial has ended. Subscribe to continue.', },
     schedule: { today: 'Today', noWorkers: 'No one in the crew yet', },
     common: {
       cancel: 'Cancel', save: 'Save', delete: 'Delete', edit: 'Edit',
@@ -328,10 +329,10 @@ const t = {
       title: 'Team', invite: '+ Add Worker', close: 'Close',
       statTotal: 'Total', statOnSite: 'On Site', statAway: 'Away',
       codeMethod: 'Invite code',
-      codeDesc: 'Share this code — worker enters it in their Account page to request access.',
+      codeDesc: 'Share the link: the person taps it and you connect with one button. They confirm it on their side.',
       copyCode: 'Copy code', copied: '✓ Copied!',
       emailMethod: 'Add Worker',
-      emailDesc: 'Enter the email the worker registered with.',
+      emailDesc: 'Enter the email of a registered worker. They get an invitation and join after accepting it.',
       joinRequests: 'Join Requests',
       wantsToJoin: 'Requests to join',
       accept: '✓ Accept', decline: '✕ Decline',
@@ -601,6 +602,7 @@ const t = {
 
   // ── Русский ─────────────────────────────────────────────────────────────────
   ru: {
+    invite: { shareTextWorker: 'Добавьте меня в вашу бригаду в Tutuu. Откройте ссылку: ', shareTextForeman: 'Вступайте в мою бригаду в Tutuu. Откройте ссылку: ', share: 'Поделиться', copied: 'Ссылка скопирована', copyFailed: 'Не удалось скопировать', myCodeSection: 'Мой код приглашения', myCodeDesc: 'Отправьте эту ссылку прорабу (WhatsApp, СМС...). Он нажимает на неё и одной кнопкой приглашает вас, а вы принимаете приглашение.', invitedYou: 'приглашает вас в свою бригаду', wantsToJoin: 'хочет вступить в вашу бригаду', inboxWorker: 'Приглашения', inboxForeman: 'Заявки на вступление', accept: 'Принять', approve: 'Принять', decline: 'Отказаться', failed: 'Что-то пошло не так. Попробуйте ещё раз.', linkTitle: 'Приглашение в бригаду', linkNotFound: 'Эта ссылка недействительна.', ownLink: 'Это ваша собственная ссылка.', sameRole: 'Нельзя соединить два аккаунта одной роли.', askJoinCrew: 'Отправить заявку в бригаду {name}? Прораб подтвердит её.', askInvite: 'Пригласить {name} в вашу бригаду? Человек получит приглашение и примет его.', sendRequest: 'Отправить заявку', sendInvite: 'Отправить приглашение', later: 'Позже', done: 'Закрыть', requestSent: 'Заявка отправлена: {name}. Вы вступите после подтверждения.', inviteSent: '{name} приглашён! Он вступит после принятия.', sentTitle: 'Отправленные приглашения', waiting: 'ждёт ответа', withdraw: 'Отозвать' },
     assistant: {
       title: 'Помощник', close: 'Закрыть', send: 'Отправить', mic: 'Диктовать', micStop: 'Стоп',
       placeholder: 'Скажите или напишите…',
@@ -661,7 +663,7 @@ const t = {
       op_delete_project: 'Удалить проект: {name}',
       op_set_worker_rate: 'Изменить ставку',
       op_update_worker: 'Изменить данные рабочего',
-      op_add_worker_by_email: 'Добавить рабочего в команду',
+      op_add_worker_by_email: 'Пригласить рабочего в бригаду', inviteNote: 'Рабочий получит приглашение и вступит после принятия',
       op_assign_worker_to_projects: 'Назначить на проекты',
       op_remove_worker_from_project: 'Снять с проекта',
       op_respond_join_request: 'Заявка на вступление',
@@ -698,7 +700,7 @@ const t = {
     },
     roles: { foreman: 'Прораб', manager: 'Менеджер', worker: 'Рабочий', client: 'Клиент' },
     lockout: { foremanMsg: 'Пробный период закончился — оформите подписку, чтобы продолжить создавать и редактировать.', foremanCta: 'Оформить подписку', memberMsg: 'Данные в безопасности, но подписка вашего прораба требует внимания — изменения приостановлены до её оформления.', },
-    errors: { deleteFailed: 'Проект не удалён. Проверьте соединение и попробуйте снова.', limitWorkers: 'Достигнут лимит рабочих: 3 в пробном периоде, 10 на Standard, без ограничений на Pro. Выберите тариф, чтобы добавить больше.', limitProjects: 'Достигнут лимит проектов: 1 в пробном периоде, 3 на Standard, без ограничений на Pro. Выберите тариф, чтобы добавить больше.', locked: 'Пробный период закончился. Оформите подписку, чтобы продолжить.', },
+    errors: { deleteFailed: 'Проект не удалён. Проверьте соединение и попробуйте снова.', limitWorkers: 'Достигнут лимит рабочих на проектах: 3 в пробном периоде, 10 на Standard, без ограничений на Pro. Сама бригада без ограничений. Выберите тариф, чтобы назначить больше на проекты.', limitProjects: 'Достигнут лимит проектов: 1 в пробном периоде, 3 на Standard, без ограничений на Pro. Выберите тариф, чтобы добавить больше.', locked: 'Пробный период закончился. Оформите подписку, чтобы продолжить.', },
     schedule: { today: 'Сегодня', noWorkers: 'В команде пока никого нет', },
     common: {
       cancel: 'Отмена', save: 'Сохранить', delete: 'Удалить', edit: 'Изменить',
@@ -923,10 +925,10 @@ const t = {
       title: 'Бригада', invite: '+ Добавить', close: 'Закрыть',
       statTotal: 'Всего', statOnSite: 'На объекте', statAway: 'Отсутствуют',
       codeMethod: 'Код приглашения',
-      codeDesc: 'Поделитесь кодом — рабочий вводит его в разделе «Аккаунт» чтобы отправить заявку.',
+      codeDesc: 'Поделитесь ссылкой: человек нажимает на неё, и вы связываетесь одной кнопкой. Он подтверждает это у себя.',
       copyCode: 'Скопировать', copied: '✓ Скопировано!',
       emailMethod: 'Добавить рабочего',
-      emailDesc: 'Введите email которым рабочий зарегистрировался.',
+      emailDesc: 'Введите email зарегистрированного рабочего. Он получит приглашение и вступит после принятия.',
       joinRequests: 'Заявки на вступление',
       wantsToJoin: 'Хочет вступить в бригаду',
       accept: '✓ Принять', decline: '✕ Отклонить',
@@ -1205,7 +1207,7 @@ const t = {
     },
     roles: { foreman: 'Poslovođa', manager: 'Menadžer', worker: 'Radnik', client: 'Klijent' },
     lockout: { foremanMsg: 'Probni period je istekao — pretplatite se da biste nastavili da kreirate i menjate.', foremanCta: 'Pretplati se', memberMsg: 'Vaši podaci su bezbedni, ali pretplata vašeg poslovođe zahteva pažnju — izmene su pauzirane dok se ne obnovi.', },
-    errors: { deleteFailed: 'Projekat nije obrisan. Proverite vezu i pokušajte ponovo.', limitWorkers: 'Dostignut je limit radnika: 3 u probnom periodu, 10 na Standard, neograničeno na Pro. Izaberite plan da dodate više.', limitProjects: 'Dostignut je limit projekata: 1 u probnom periodu, 3 na Standard, neograničeno na Pro. Izaberite plan da dodate više.', locked: 'Probni period je istekao. Pretplatite se da biste nastavili.', },
+    errors: { deleteFailed: 'Projekat nije obrisan. Proverite vezu i pokušajte ponovo.', limitWorkers: 'Dostignut je limit radnika na projektima: 3 u probnom periodu, 10 na Standard, neograničeno na Pro. Sama ekipa nema ograničenja. Izaberite plan da dodate više na projekte.', limitProjects: 'Dostignut je limit projekata: 1 u probnom periodu, 3 na Standard, neograničeno na Pro. Izaberite plan da dodate više.', locked: 'Probni period je istekao. Pretplatite se da biste nastavili.', },
     schedule: { today: 'Danas', noWorkers: 'U ekipi još nema nikoga', },
     common: {
       cancel: 'Otkaži', save: 'Sačuvaj', delete: 'Obriši', edit: 'Uredi',
@@ -1673,7 +1675,7 @@ const t = {
     },
     roles: { foreman: 'Capataz', manager: 'Gerente', worker: 'Obrero', client: 'Cliente' },
     lockout: { foremanMsg: 'Tu prueba gratuita ha terminado — suscríbete para seguir creando y editando.', foremanCta: 'Suscribirse', memberMsg: 'Tus datos están seguros, pero la suscripción de tu capataz necesita atención — los cambios están pausados hasta que se renueve.', },
-    errors: { deleteFailed: 'El proyecto no se eliminó. Comprueba la conexión e inténtalo de nuevo.', limitWorkers: 'Límite de trabajadores alcanzado: 3 en la prueba gratuita, 10 en Standard, ilimitado en Pro. Elige un plan para añadir más.', limitProjects: 'Límite de proyectos alcanzado: 1 en la prueba gratuita, 3 en Standard, ilimitado en Pro. Elige un plan para añadir más.', locked: 'Tu prueba ha terminado. Suscríbete para continuar.', },
+    errors: { deleteFailed: 'El proyecto no se eliminó. Comprueba la conexión e inténtalo de nuevo.', limitWorkers: 'Se alcanzó el límite de trabajadores en proyectos: 3 en la prueba gratuita, 10 en Standard, ilimitado en Pro. El equipo en sí no tiene límite. Elige un plan para añadir más a los proyectos.', limitProjects: 'Límite de proyectos alcanzado: 1 en la prueba gratuita, 3 en Standard, ilimitado en Pro. Elige un plan para añadir más.', locked: 'Tu prueba ha terminado. Suscríbete para continuar.', },
     schedule: { today: 'Hoy', noWorkers: 'Todavía no hay nadie en el equipo', },
     common: {
       cancel: 'Cancelar', save: 'Guardar', delete: 'Eliminar', edit: 'Editar',
@@ -2141,7 +2143,7 @@ const t = {
     },
     roles: { foreman: 'Mestre de obras', manager: 'Gerente', worker: 'Trabalhador', client: 'Cliente' },
     lockout: { foremanMsg: 'Seu teste grátis terminou — assine para continuar criando e editando.', foremanCta: 'Assinar', memberMsg: 'Seus dados estão seguros, mas a assinatura do seu mestre de obras precisa de atenção — as alterações estão pausadas até a renovação.', },
-    errors: { deleteFailed: 'O projeto não foi excluído. Verifique a conexão e tente novamente.', limitWorkers: 'Limite de trabalhadores atingido: 3 no teste gratuito, 10 no Standard, ilimitado no Pro. Escolha um plano para adicionar mais.', limitProjects: 'Limite de projetos atingido: 1 no teste gratuito, 3 no Standard, ilimitado no Pro. Escolha um plano para adicionar mais.', locked: 'Seu teste terminou. Assine para continuar.', },
+    errors: { deleteFailed: 'O projeto não foi excluído. Verifique a conexão e tente novamente.', limitWorkers: 'O limite de trabalhadores em projetos foi atingido: 3 no teste gratuito, 10 no Standard, ilimitado no Pro. A equipe em si não tem limite. Escolha um plano para adicionar mais aos projetos.', limitProjects: 'Limite de projetos atingido: 1 no teste gratuito, 3 no Standard, ilimitado no Pro. Escolha um plano para adicionar mais.', locked: 'Seu teste terminou. Assine para continuar.', },
     schedule: { today: 'Hoje', noWorkers: 'Ainda não há ninguém na equipe', },
     common: {
       cancel: 'Cancelar', save: 'Salvar', delete: 'Excluir', edit: 'Editar',
@@ -2609,7 +2611,7 @@ const t = {
     },
     roles: { foreman: 'Vorarbeiter', manager: 'Manager', worker: 'Arbeiter', client: 'Auftraggeber' },
     lockout: { foremanMsg: 'Deine Testphase ist abgelaufen — abonniere, um weiter erstellen und bearbeiten zu können.', foremanCta: 'Abonnieren', memberMsg: 'Deine Daten sind sicher, aber das Abo deines Vorarbeiters braucht Aufmerksamkeit — Änderungen sind pausiert, bis er wieder abonniert.', },
-    errors: { deleteFailed: 'Das Projekt wurde nicht gelöscht. Prüfe die Verbindung und versuche es erneut.', limitWorkers: 'Arbeiterlimit erreicht: 3 in der Testphase, 10 bei Standard, unbegrenzt bei Pro. Wähle einen Plan, um mehr hinzuzufügen.', limitProjects: 'Projektlimit erreicht: 1 in der Testphase, 3 bei Standard, unbegrenzt bei Pro. Wähle einen Plan, um mehr hinzuzufügen.', locked: 'Deine Testphase ist abgelaufen. Abonniere, um fortzufahren.', },
+    errors: { deleteFailed: 'Das Projekt wurde nicht gelöscht. Prüfe die Verbindung und versuche es erneut.', limitWorkers: 'Das Limit für Arbeiter in Projekten ist erreicht: 3 in der Testphase, 10 bei Standard, unbegrenzt bei Pro. Das Team selbst ist unbegrenzt. Wähle einen Plan, um mehr Projekten zuzuweisen.', limitProjects: 'Projektlimit erreicht: 1 in der Testphase, 3 bei Standard, unbegrenzt bei Pro. Wähle einen Plan, um mehr hinzuzufügen.', locked: 'Deine Testphase ist abgelaufen. Abonniere, um fortzufahren.', },
     schedule: { today: 'Heute', noWorkers: 'Noch niemand im Team', },
     common: {
       cancel: 'Abbrechen', save: 'Speichern', delete: 'Löschen', edit: 'Bearbeiten',
@@ -3077,7 +3079,7 @@ const t = {
     },
     roles: { foreman: 'Contremaître', manager: 'Manager', worker: 'Ouvrier', client: 'Client' },
     lockout: { foremanMsg: 'Votre essai gratuit est terminé — abonnez-vous pour continuer à créer et modifier.', foremanCta: "S'abonner", memberMsg: "Vos données sont en sécurité, mais l'abonnement de votre chef de chantier nécessite votre attention — les modifications sont suspendues jusqu'au renouvellement.", },
-    errors: { deleteFailed: "Le projet n'a pas été supprimé. Vérifiez la connexion et réessayez.", limitWorkers: 'Limite d\'ouvriers atteinte : 3 pendant l\'essai gratuit, 10 avec Standard, illimité avec Pro. Choisissez un forfait pour en ajouter.', limitProjects: 'Limite de projets atteinte : 1 pendant l\'essai gratuit, 3 avec Standard, illimité avec Pro. Choisissez un forfait pour en ajouter.', locked: 'Votre essai est terminé. Abonnez-vous pour continuer.', },
+    errors: { deleteFailed: "Le projet n'a pas été supprimé. Vérifiez la connexion et réessayez.", limitWorkers: 'La limite d\'ouvriers sur les projets est atteinte : 3 pendant l\'essai gratuit, 10 avec Standard, illimité avec Pro. L\'équipe elle-même n\'a pas de limite. Choisissez un forfait pour en affecter plus aux projets.', limitProjects: 'Limite de projets atteinte : 1 pendant l\'essai gratuit, 3 avec Standard, illimité avec Pro. Choisissez un forfait pour en ajouter.', locked: 'Votre essai est terminé. Abonnez-vous pour continuer.', },
     schedule: { today: "Aujourd'hui", noWorkers: "Personne dans l'équipe pour l'instant", },
     common: {
       cancel: 'Annuler', save: 'Enregistrer', delete: 'Supprimer', edit: 'Modifier',
@@ -3545,7 +3547,7 @@ const t = {
     },
     roles: { foreman: 'Majster', manager: 'Manažér', worker: 'Pracovník', client: 'Klient' },
     lockout: { foremanMsg: 'Vaše skúšobné obdobie skončilo — predplaťte si, aby ste mohli pokračovať vo vytváraní a úpravách.', foremanCta: 'Predplatiť', memberMsg: 'Vaše dáta sú v bezpečí, ale predplatné vášho majstra vyžaduje pozornosť — zmeny sú pozastavené, kým si ho neobnoví.', },
-    errors: { deleteFailed: 'Projekt nebol odstránený. Skontrolujte pripojenie a skúste to znova.', limitWorkers: 'Dosiahnutý limit pracovníkov: 3 v skúšobnom období, 10 na Standard, bez obmedzenia na Pro. Vyberte plán, aby ste mohli pridať viac.', limitProjects: 'Dosiahnutý limit projektov: 1 v skúšobnom období, 3 na Standard, bez obmedzenia na Pro. Vyberte plán, aby ste mohli pridať viac.', locked: 'Vaša skúšobná verzia skončila. Predplaťte si pre pokračovanie.', },
+    errors: { deleteFailed: 'Projekt nebol odstránený. Skontrolujte pripojenie a skúste to znova.', limitWorkers: 'Limit pracovníkov na projektoch je dosiahnutý: 3 v skúšobnom období, 10 na Standard, bez obmedzenia na Pro. Samotný tím limit nemá. Vyberte plán, aby ste mohli priradiť viac na projekty.', limitProjects: 'Dosiahnutý limit projektov: 1 v skúšobnom období, 3 na Standard, bez obmedzenia na Pro. Vyberte plán, aby ste mohli pridať viac.', locked: 'Vaša skúšobná verzia skončila. Predplaťte si pre pokračovanie.', },
     schedule: { today: 'Dnes', noWorkers: 'V tíme zatiaľ nikto nie je', },
     common: {
       cancel: 'Zrušiť', save: 'Uložiť', delete: 'Odstrániť', edit: 'Upraviť',
@@ -4012,7 +4014,7 @@ const t = {
     },
     roles: { foreman: 'Vedoucí', manager: 'Manažer', worker: 'Pracovník', client: 'Klient' },
     lockout: { foremanMsg: 'Vaše zkušební období skončilo — předplaťte si, abyste mohli pokračovat ve vytváření a úpravách.', foremanCta: 'Předplatit', memberMsg: 'Vaše data jsou v bezpečí, ale předplatné vašeho mistra vyžaduje pozornost — změny jsou pozastaveny, dokud si ho neobnoví.', },
-    errors: { deleteFailed: 'Projekt nebyl smazán. Zkontrolujte připojení a zkuste to znovu.', limitWorkers: 'Dosažen limit pracovníků: 3 ve zkušebním období, 10 na Standard, bez omezení na Pro. Vyberte plán, abyste mohli přidat další.', limitProjects: 'Dosažen limit projektů: 1 ve zkušebním období, 3 na Standard, bez omezení na Pro. Vyberte plán, abyste mohli přidat další.', locked: 'Vaše zkušební verze skončila. Předplaťte si pro pokračování.', },
+    errors: { deleteFailed: 'Projekt nebyl smazán. Zkontrolujte připojení a zkuste to znovu.', limitWorkers: 'Limit pracovníků na projektech je dosažen: 3 ve zkušebním období, 10 na Standard, bez omezení na Pro. Samotný tým limit nemá. Vyberte plán, abyste mohli přiřadit více na projekty.', limitProjects: 'Dosažen limit projektů: 1 ve zkušebním období, 3 na Standard, bez omezení na Pro. Vyberte plán, abyste mohli přidat další.', locked: 'Vaše zkušební verze skončila. Předplaťte si pro pokračování.', },
     schedule: { today: 'Dnes', noWorkers: 'V týmu zatím nikdo není', },
     common: {
       cancel: 'Zrušit', save: 'Uložit', delete: 'Smazat', edit: 'Upravit',

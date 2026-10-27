@@ -102,8 +102,8 @@ export const useStore = create((set, get) => ({
       options: { data: { name, role } }
     })
     if (error) { set({ loading: false }); return { error } }
-    // Генерируем invite_code для прораба
-    if (role === 'foreman' && data.user) {
+    // Every account gets an invite code (workers share it to be invited, foremen to invite)
+    if (data.user) {
       const code = Math.random().toString(36).substring(2, 10)
       await supabase.from('profiles').update({ invite_code: code }).eq('id', data.user.id)
     }
@@ -115,7 +115,7 @@ export const useStore = create((set, get) => ({
     await supabase.auth.signOut()
     // The assistant history is private to whoever was signed in on this device
     try { Object.keys(localStorage).filter(k => k.startsWith('tutuu_assistant_')).forEach(k => localStorage.removeItem(k)) } catch { /* storage blocked */ }
-    set({ user: null, profile: null, role: null, tasks: [], projects: [], tools: [], team: [], joinRequests: [], isLocked: false, billingForemanId: null })
+    set({ user: null, profile: null, role: null, tasks: [], projects: [], tools: [], team: [], joinRequests: [], invitations: [], sentInvites: [], isLocked: false, billingForemanId: null })
   },
 
   checkSession: async () => {
@@ -129,8 +129,8 @@ export const useStore = create((set, get) => ({
     // (email sign-up always sets it).
     const needsRole = session.user.app_metadata?.provider !== 'email' && !session.user.user_metadata?.role
     if (!profile || !profile.role || needsRole) { set({ user: session.user, profile: null, role: null }); return }
-    // Если прораб без invite_code — генерируем
-    if (profile?.role === 'foreman' && !profile?.invite_code) {
+    // Accounts without an invite code get one
+    if (!profile?.invite_code) {
       const code = Math.random().toString(36).substring(2, 10)
       await supabase.from('profiles').update({ invite_code: code }).eq('id', session.user.id)
       profile.invite_code = code
@@ -438,39 +438,103 @@ export const useStore = create((set, get) => ({
     return { error }
   },
 
-  // Add a worker to the foreman's crew without assigning them to any project yet
-  // (via an approved join_requests row — the same relationship a worker gets by
-  // sending a join request and having it accepted). Assign to actual project(s)
-  // separately with addWorkerToProject.
-  addWorkerToTeam: async (email) => {
+  // ── CREW INVITATIONS ─────────────────────────────────────────
+  // Two directions, and both need an answer from the other side:
+  //   worker -> foreman (by the foreman's code or link): the foreman approves or declines
+  //   foreman -> worker (by code, link or email): the worker accepts or declines
+  // The crew (everyone who accepted) has no size limit. The plan limit applies to how many
+  // workers are put on projects (addWorkerToProject).
+  invitations: [],  // worker: invitations from foremen waiting for an answer
+  sentInvites: [],  // foreman: invitations sent, waiting for an answer
+
+  lookupProfileByCode: async (code) => {
+    const { data } = await supabase.rpc('find_profile_by_code', { p_code: String(code || '').trim().toLowerCase() })
+    return data?.[0] || null
+  },
+
+  // Foreman -> worker. `target` is { id, name, role } found by code or email.
+  inviteWorker: async (target) => {
     const { profile } = get()
-    const lim = limitsFor(profile)
-    if (lim.maxWorkers != null) {
-      const roster = (await get()._buildRoster()) || []
-      if (roster.length >= lim.maxWorkers) return { error: 'limit_workers' }
+    if (!target || target.role !== 'worker') return { error: 'This user is not registered as a Worker.' }
+    if (target.id === profile.id) return { error: 'You cannot invite yourself.' }
+    const send = () => supabase.from('join_requests')
+      .insert({ foreman_id: profile.id, worker_id: target.id, status: 'pending', initiated_by: 'foreman' })
+    let { error } = await send()
+    if (error?.code === '23505') {
+      const { data: existing } = await supabase.from('join_requests').select('id, status, initiated_by')
+        .eq('foreman_id', profile.id).eq('worker_id', target.id).maybeSingle()
+      if (existing?.status === 'approved') return { error: 'Already in your crew.' }
+      if (existing?.status === 'pending') {
+        return { error: existing.initiated_by === 'worker' ? 'This worker already asked to join: accept the request in Team.' : 'Invitation already sent.' }
+      }
+      // an earlier answer was "declined": clear it and invite again
+      if (existing) await supabase.from('join_requests').delete().eq('id', existing.id)
+      ;({ error } = await send())
     }
+    if (error) return { error: error.message }
+    sendPush(target.id, 'Crew invitation', `${profile.name} invites you to join the crew`, '/app')
+    get().fetchSentInvites()
+    return { error: null, id: target.id, name: target.name, invited: true }
+  },
+
+  // By email (the "add worker" box and the assistant): sends an invitation, not a silent add
+  addWorkerToTeam: async (email) => {
     // Profiles of strangers are not readable; a server function finds one person by exact email
     const { data: found, error } = await supabase.rpc('find_profile_by_email', { p_email: email })
     const worker = found?.[0]
     if (error || !worker) return { error: 'User not found. Ask them to register first.' }
-    if (worker.role !== 'worker') return { error: 'This user is not registered as a Worker.' }
-    const { error: insErr } = await supabase.from('join_requests')
-      .insert({ foreman_id: profile.id, worker_id: worker.id, status: 'approved' })
-    if (insErr) {
-      if (insErr.code === '23505') {
-        // Already linked (pending request or previously approved) — make sure it's approved
-        await supabase.from('join_requests').update({ status: 'approved' })
-          .eq('foreman_id', profile.id).eq('worker_id', worker.id)
-      } else {
-        return { error: insErr.message }
-      }
-    }
-    get().logActivity({ action_type: 'worker_joined', entity_name: worker.name, entity_id: worker.id })
-    return { error: null, id: worker.id, name: worker.name }
+    return get().inviteWorker(worker)
   },
 
-  // Assign an existing crew member (or anyone with a profile) to one specific project
+  fetchSentInvites: async () => {
+    const { profile } = get()
+    if (profile?.role !== 'foreman') return
+    const { data, error } = await supabase.from('join_requests')
+      .select('id, status, created_at, worker:profiles!join_requests_worker_id_fkey(id, name, email, role)')
+      .eq('foreman_id', profile.id).eq('initiated_by', 'foreman').eq('status', 'pending')
+      .order('created_at', { ascending: false })
+    if (!error) set({ sentInvites: data || [] })
+  },
+
+  fetchInvitations: async () => {
+    const { profile } = get()
+    if (!profile) return
+    const { data, error } = await supabase.from('join_requests')
+      .select('id, status, created_at, foreman:profiles!join_requests_foreman_id_fkey(id, name, company)')
+      .eq('worker_id', profile.id).eq('initiated_by', 'foreman').eq('status', 'pending')
+      .order('created_at', { ascending: false })
+    if (!error) set({ invitations: data || [] })
+  },
+
+  // Worker answers a foreman's invitation
+  respondInvitation: async (requestId, accept) => {
+    const { profile, invitations } = get()
+    const inv = invitations.find(r => r.id === requestId)
+    const { error } = await supabase.from('join_requests').update({ status: accept ? 'approved' : 'rejected' }).eq('id', requestId)
+    if (error) return { error }
+    set(s => ({ invitations: s.invitations.filter(r => r.id !== requestId) }))
+    if (accept && inv?.foreman?.id) sendPush(inv.foreman.id, 'Invitation accepted', `${profile.name} joined your crew`, '/app')
+    return { error: null }
+  },
+
+  // Foreman takes back an invitation that has not been answered
+  withdrawInvite: async (requestId) => {
+    const { error } = await supabase.from('join_requests').delete().eq('id', requestId)
+    if (!error) set(s => ({ sentInvites: s.sentInvites.filter(r => r.id !== requestId) }))
+    return { error }
+  },
+
+  // Assign a crew member to one specific project. Plan limit: how many different workers
+  // are on this foreman's projects (a worker already on another project does not count twice).
   addWorkerToProject: async (workerId, projectId) => {
+    const { profile, projects } = get()
+    const lim = limitsFor(profile)
+    if (lim.maxWorkers != null) {
+      const { data } = await supabase.from('project_workers')
+        .select('worker_id, worker:profiles(role)').in('project_id', projects.map(p => p.id))
+      const onProjects = new Set((data || []).filter(r => r.worker?.role === 'worker').map(r => r.worker_id))
+      if (!onProjects.has(workerId) && onProjects.size >= lim.maxWorkers) return { error: 'limit_workers' }
+    }
     const { error } = await supabase.from('project_workers').insert({ project_id: projectId, worker_id: workerId })
     if (error) return { error: error.code === '23505' ? 'Already on this project.' : error.message }
     return { error: null }
@@ -489,29 +553,32 @@ export const useStore = create((set, get) => ({
     get()._patchTeamMember(workerId, { phone: phone || null, telegram: telegram || null }),
 
   // ── JOIN REQUESTS ─────────────────────────────────────────
-  // Рабочий отправляет заявку прорабу по invite_code
+  // Worker -> foreman by the foreman's invite code or link
   sendJoinRequest: async (inviteCode) => {
     const { profile } = get()
-    // Найти прораба по коду
-    const { data: foundForeman, error: fErr } = await supabase.rpc('find_foreman_by_code', { p_code: inviteCode })
-    const foreman = foundForeman?.[0]
-    if (fErr || !foreman) return { error: 'Foreman not found. Check the code.' }
-    if (foreman.role !== 'foreman') return { error: 'This code does not belong to a foreman.' }
-    if (foreman.id === profile.id) return { error: 'You cannot join yourself.' }
-    // Создать заявку
-    const { error } = await supabase.from('join_requests').insert({
-      foreman_id: foreman.id,
-      worker_id: profile.id,
-    })
-    if (error) {
-      if (error.code === '23505') return { error: 'Request already sent.' }
-      return { error: error.message }
+    const found = await get().lookupProfileByCode(inviteCode)
+    if (!found) return { error: 'Foreman not found. Check the code.' }
+    if (found.role !== 'foreman') return { error: 'This code does not belong to a foreman.' }
+    if (found.id === profile.id) return { error: 'You cannot join yourself.' }
+    const send = () => supabase.from('join_requests')
+      .insert({ foreman_id: found.id, worker_id: profile.id, status: 'pending', initiated_by: 'worker' })
+    let { error } = await send()
+    if (error?.code === '23505') {
+      const { data: existing } = await supabase.from('join_requests').select('id, status, initiated_by')
+        .eq('foreman_id', found.id).eq('worker_id', profile.id).maybeSingle()
+      if (existing?.status === 'approved') return { error: 'You are already in this crew.' }
+      if (existing?.status === 'pending') {
+        return { error: existing.initiated_by === 'foreman' ? 'This foreman already invited you: accept the invitation.' : 'Request already sent.' }
+      }
+      if (existing) await supabase.from('join_requests').delete().eq('id', existing.id)
+      ;({ error } = await send())
     }
-    sendPush(foreman.id, 'New join request', `${profile.name} wants to join your crew`, '/app')
-    return { error: null, foremanName: foreman.name }
+    if (error) return { error: error.message }
+    sendPush(found.id, 'New join request', `${profile.name} wants to join your crew`, '/app')
+    return { error: null, foremanName: found.name }
   },
 
-  // Прораб получает список заявок
+  // Foreman: requests from workers waiting for an answer
   fetchJoinRequests: async () => {
     const { profile } = get()
     const { data, error } = await supabase
@@ -521,33 +588,29 @@ export const useStore = create((set, get) => ({
         worker:profiles!join_requests_worker_id_fkey(id, name, email, role)
       `)
       .eq('foreman_id', profile.id)
+      .eq('initiated_by', 'worker')
       .eq('status', 'pending')
       .order('created_at', { ascending: false })
     if (error) return
     set({ joinRequests: data || [] })
   },
 
-  // Прораб одобряет заявку — только присоединяет к бригаде, без привязки к
-  // проектам. Прораб назначает на конкретные проекты отдельно, через
-  // "+ Add" на вкладке Team внутри каждого проекта.
+  // Foreman approves a worker's request: joins the crew only; projects are assigned
+  // separately ("+ Add" in a project's Team tab). The crew has no size limit.
   approveJoinRequest: async (requestId, workerId) => {
     const { joinRequests, profile } = get()
-    const lim = limitsFor(profile)
-    if (lim.maxWorkers != null) {
-      const roster = (await get()._buildRoster()) || []
-      if (roster.length >= lim.maxWorkers) return { error: 'limit_workers' }
-    }
     const req = joinRequests.find(r => r.id === requestId)
     const workerName = req?.worker?.name || 'Unknown'
 
-    await supabase.from('join_requests').update({ status: 'approved' }).eq('id', requestId)
+    const { error } = await supabase.from('join_requests').update({ status: 'approved' }).eq('id', requestId)
+    if (error) return { error: error.message }
     set(s => ({ joinRequests: s.joinRequests.filter(r => r.id !== requestId) }))
     get().logActivity({ action_type: 'worker_joined', entity_name: workerName, entity_id: workerId })
     sendPush(workerId, 'Request approved', `${profile.name} added you to the crew`, '/app')
     return { error: null }
   },
 
-  // Прораб отклоняет заявку
+  // Foreman declines a worker's request
   rejectJoinRequest: async (requestId) => {
     await supabase.from('join_requests').update({ status: 'rejected' }).eq('id', requestId)
     set(s => ({ joinRequests: s.joinRequests.filter(r => r.id !== requestId) }))
@@ -1054,7 +1117,7 @@ const MUTATING_ACTIONS = [
   'addTool', 'updateTool', 'deleteTool',
   'removeWorkerFromProject', 'addWorkerToTeam', 'addWorkerToProject',
   'updateWorkerStatus', 'updateWorkerContact',
-  'approveJoinRequest', 'rejectJoinRequest', 'addManagerToTeam',
+  'approveJoinRequest', 'rejectJoinRequest', 'addManagerToTeam', 'inviteWorker', 'withdrawInvite',
   'addMaterialRequest', 'updateMaterialRequestStatus', 'deleteMaterialRequest',
   'addMaterial', 'markMaterialPurchased', 'markMaterialNeeded', 'deleteMaterial',
   'addComment',
@@ -1068,7 +1131,7 @@ const MUTATING_ACTIONS = [
 const SOUND_FOR = {
   createProject: 'success', addTask: 'success', addTool: 'success', addMaterialRequest: 'success', addMaterial: 'success',
   addExpense: 'success', addDocument: 'success', addWorkLog: 'success', addPayment: 'success', saveAttendance: 'success',
-  addWorkerToTeam: 'success', addWorkerToProject: 'success', addManagerToTeam: 'success', approveJoinRequest: 'success',
+  addWorkerToTeam: 'success', inviteWorker: 'success', respondInvitation: 'success', addWorkerToProject: 'success', addManagerToTeam: 'success', approveJoinRequest: 'success',
   submitTask: 'success', approveTask: 'done',
   deleteProject: 'delete', deleteTask: 'delete', deleteTool: 'delete', deleteMaterial: 'delete', deleteMaterialRequest: 'delete',
   deleteExpense: 'delete', deleteDocument: 'delete', deleteWorkLog: 'delete', deletePayment: 'delete',

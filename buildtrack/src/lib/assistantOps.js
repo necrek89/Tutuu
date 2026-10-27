@@ -244,8 +244,7 @@ export function normalizeExtra(action) {
     case 'add_worker_by_email': {
       const email = text(input.email, 120).toLowerCase()
       if (!/^\S+@\S+\.\S+$/.test(email)) return null
-      const projs = (Array.isArray(input.project_ids) ? input.project_ids : []).map(project).filter(Boolean)
-      return generic('add_worker_by_email', tr('assistant.op_add_worker_by_email'), [email, ...projs.map(p => `→ ${p.name}`)], { email, projectIds: projs.map(p => p.id) })
+      return generic('add_worker_by_email', tr('assistant.op_add_worker_by_email'), [email, tr('assistant.inviteNote')], { email })
     }
     case 'assign_worker_to_projects': {
       const w = worker(input.worker_id)
@@ -312,13 +311,8 @@ export async function applyExtra(a, photoFiles = []) {
       return { error: null }
     }
     case 'add_worker_by_email': {
-      let id = a.addedId
-      if (!id) {
-        const res = await st.addWorkerToTeam(a.email)
-        if (res?.error) return { error: new Error(typeof res.error === 'string' ? res.error : 'add worker') }
-        id = a.addedId = res.id
-      }
-      return steps(a.projectIds.map(pid => ({ pid })), it => st.addWorkerToProject(id, it.pid))
+      const res = await st.addWorkerToTeam(a.email)
+      return res?.error ? { error: new Error(typeof res.error === 'string' ? res.error : 'invite') } : { error: null }
     }
     case 'assign_worker_to_projects': return steps(a.projectIds.map(pid => ({ pid })), it => st.addWorkerToProject(a.workerId, it.pid))
     case 'remove_worker_from_project': return st.removeWorkerFromProject(a.projectId, a.workerId)

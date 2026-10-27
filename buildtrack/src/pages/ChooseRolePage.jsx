@@ -21,7 +21,7 @@ export default function ChooseRolePage({ onDone }) {
     // so this is an UPDATE. (An upsert would fail: email is NOT NULL and Postgres
     // checks the proposed insert row before it resolves the conflict.)
     const patch = { name: name.trim(), role }
-    if (role === 'foreman') patch.invite_code = Math.random().toString(36).substring(2, 10)
+    patch.invite_code = Math.random().toString(36).substring(2, 10)
     let { data: rows, error: err } = await supabase.from('profiles').update(patch).eq('id', user.id).select('id')
     if (!err && (!rows || rows.length === 0)) {
       // no profile yet (trigger missing/slow): create it

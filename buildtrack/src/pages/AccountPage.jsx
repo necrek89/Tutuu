@@ -23,8 +23,7 @@ function JoinForeman({ t }) {
 
   const send = () => code.trim() && guard(async () => {
     setMsg('')
-    let inviteCode = code.trim()
-    if (inviteCode.includes('?join=')) inviteCode = inviteCode.split('?join=')[1]
+    const inviteCode = codeFromInput(code)
     const { error, foremanName } = await sendJoinRequest(inviteCode)
     if (error) setMsg(error)
     else setMsg(t('account.msgRequestSent', { name: foremanName }))
@@ -430,6 +429,16 @@ export default function AccountPage() {
 
       <TextSizeSettings />
       <SoundSettings />
+
+      {/* ── Invitations: mine to answer, and my own code to share (workers) ── */}
+      {profile?.role === 'worker' && <JoinInbox />}
+      {profile?.role === 'worker' && (
+        <div className="card card-body" style={{ marginBottom:12 }}>
+          <div className="section-title">{t('invite.myCodeSection')}</div>
+          <p style={{ fontSize:12, color:'var(--text-secondary)', marginBottom:10 }}>{t('invite.myCodeDesc')}</p>
+          <ShareInvite />
+        </div>
+      )}
 
       {/* ── Join Foreman (workers only) ── */}
       {profile?.role === 'worker' && (

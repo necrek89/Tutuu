@@ -16,6 +16,8 @@ import LockoutBanner from './components/LockoutBanner'
 const AssistantModal = lazy(() => import('./components/AssistantModal'))
 import { supabase } from './lib/supabase'
 import { initTextSize } from './lib/textSize'
+import { captureJoinCode, getPendingJoin, clearPendingJoin } from './lib/joinLink'
+import JoinInviteModal from './components/JoinInviteModal'
 
 // ── Task Search Overlay ───────────────────────────────────────────────────────
 function TaskSearch({ onClose, onNavigate }) {
@@ -234,7 +236,10 @@ export default function App() {
   const [needsRole, setNeedsRole]     = useState(false)
   const [onboarding, setOnboarding]   = useState(() => !localStorage.getItem('tutuu_onboarded'))
 
-  useEffect(() => { initTextSize() }, [])
+  useEffect(() => { initTextSize(); captureJoinCode() }, [])
+  const [joinCode, setJoinCode] = useState('')
+  // After sign-in, an invitation link that was opened earlier is offered once
+  useEffect(() => { if (authed) setJoinCode(getPendingJoin()) }, [authed])
 
   useEffect(() => {
     // Detect PASSWORD_RECOVERY event — fires when user opens reset link from email
@@ -441,6 +446,10 @@ export default function App() {
       <button className="assistant-fab" onClick={() => setAssistantOpen(true)} aria-label={t('assistant.title')}>
         <Sparkle size={24} weight="fill" />
       </button>
+      {authed && !onboarding && joinCode && (
+        <JoinInviteModal code={joinCode} onClose={() => { clearPendingJoin(); setJoinCode('') }} />
+      )}
+
       {assistantOpen && (
         <Suspense fallback={null}>
           <AssistantModal onClose={() => setAssistantOpen(false)} />
